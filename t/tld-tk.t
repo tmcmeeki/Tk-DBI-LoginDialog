@@ -1,7 +1,7 @@
 # Before `make install' is performed this script should be runnable with
 #!/usr/bin/perl
 #
-# tld-tk.t - test harness for module Tk::DBI::LoginDialog
+# tld1-tk.t - test harness for module Tk::DBI::LoginDialog
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published
@@ -49,15 +49,32 @@ my $log = get_logger(__FILE__);
 my $c_this = 'Tk::DBI::LoginDialog';
 
 my $top = new MainWindow;
-my $tld = $top->LoginDialog;
-#$log->debug(sprintf "tld [%s]", Dumper($tld));
-isa_ok( $tld, $c_this, "new no parm");
-$tld->_log->info("hello");
-$tld->dump;
-do {
-	$tld->Show;
+my $tld1 = $top->LoginDialog;
+#$log->debug(sprintf "tld1 [%s]", Dumper($tld1));
+isa_ok( $tld1, $c_this, "new no parm");
+is( Tk::Exists($tld1), 1,	"exists");
 
-} until (defined $tld->cget('-dbh'));
+eval { my @dummy = $tld1->configure; };
+is($@, "", "configure $c_this");
 
+eval { $tld1->update; };
+is($@, "", "update $c_this");
+
+eval { $tld1->destroy; };
+is($@, "", "destroy $c_this");
+
+isnt(Tk::Exists($tld1), 1, "destroyed $c_this");
+
+my $tld2 = $top->LoginDialog(-instance => 'XE');
+$tld2->_log->info("hello");
+$tld2->_dump;
+#eval { $tld2->Show; };
+#is($@, "", "Show $c_this");
+#
+#$tld2->Exit('Cancel');
+
+my $dbh = $tld2->loop;
+isa_ok( $dbh, "DBI::db", "got handle");
+$log->debug(sprintf "error [%s]", $tld2->error);
 $log->info("exiting test.");
 

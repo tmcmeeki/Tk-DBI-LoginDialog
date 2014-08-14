@@ -31,24 +31,26 @@ use Log::Log4perl qw/ get_logger /;
 #    http://docstore.mik.ua/orelly/perl3/tk/ch14_01.htm
 
 #use Tk;
-use Tk::widgets qw/ DialogBox Label Entry BrowseEntry ROText messageBox /;
+use Tk::widgets qw/ DialogBox Label Entry BrowseEntry ROText /;
 use base qw/ Tk::Toplevel /;
+
+Construct Tk::Widget 'LoginDialog';
+
 
 # package constants
 
+use constant N_RETRY => 3;	# number of loops to attempt login
 use constant S_NULL => "(null)";
 use constant S_WHATAMI => "Tk::DBI::LoginDialog";
+use constant RE_DRIVER_INSTANCE => "(Oracle|DB2)";
 
-Construct Tk::Widget 'LoginDialog';
 
 # --- package globals ---
 #our $AUTOLOAD;
 our $VERSION = '0.01';
 
+
 # --- package locals ---
-my %attribute = (
-        _log => get_logger("___package___"),
-);
 
 
 # sub-routines
@@ -66,12 +68,21 @@ sub Populate {
 
 	$self->SUPER::Populate($args);
 
-	# the following specs are referenced during paint!
-
-	$self->ConfigSpecs(
-	    -logger => [ qw/ PASSIVE logger Logger /, get_logger(S_WHATAMI) ],
-	    -log => [ qw/ METHOD _log Log /, undef ],
+	my $attribute = $self->privateData;
+	%$attribute = (
+	    logger => get_logger(S_WHATAMI),
+	    driver => "",
+	    instance => "",
+	    username => "",
+	    password => "",
+	    re_driver => RE_DRIVER_INSTANCE,
 	);
+
+#	$self->ConfigSpecs(
+#	    -logger => [ qw/ PASSIVE logger Logger /, get_logger(S_WHATAMI) ],
+#	    -log => [ qw/ METHOD _log Log /, undef ],
+#	$specs{-dump} = [ qw/ METHOD dump Dump /, undef ];
+#	);
 
 	my $o = $self->paint;
 
@@ -82,25 +93,51 @@ sub Populate {
 	$specs{-dbname} = [ qw/ PASSIVE dbname Dbname /, undef ];
 	$specs{-instance} = [ qw/ PASSIVE instance Instance /, undef ];
 	$specs{-dbh} = [ qw/ PASSIVE dbh Dbh /, undef ];
-	$specs{-dump} = [ qw/ METHOD dump Dump /, undef ];
 	$specs{-error} = [ qw/ METHOD error Error /, undef ];
+#	$specs{-exit} = [ qw/ METHOD exit Exit /, sub { Tk::exit; } ];
 	$specs{-drivers} = [ qw/ METHOD drivers Drivers /, undef ];
 	$specs{-driver} = [ qw/ PASSIVE driver Driver /, undef ];
-
+	$specs{-retry} = [ qw/ PASSIVE retry Retry /, N_RETRY ];
 	$self->ConfigSpecs(%specs);
+
 	$self->ConfigSpecs('DEFAULT' => [$o]);
 
 	$self->Delegates('DEFAULT' => $o);
 }
 
 
+# --- private methods ---
+
+sub _dump {
+	my $self = shift;
+	my $w = shift;	# widget
+	my $l = shift;	# level
+
+	$w = $self unless (defined $w);
+	$l = 0 unless (defined $l);
+
+	$self->_log->debug(sprintf "path [%s] level [%d] widget [%s]",
+		$w->PathName,
+		$l++, $w->name,
+	);
+
+	for my $child ($w->children) {
+
+		$self->_dump($child, $l);
+	}
+
+	$self->_log->debug(sprintf 'ConfigSpecs [%s]', Dumper($w->Subwidget))
+		if ($l == 1);
+}
+
+
 sub _log {
 	my $self = shift;
+	my $logger = $self->privateData->{'logger'};
 
-	my $log = $self->cget('-logger');
+#	my $log = $self->cget('-logger');
 #	my $log = $self->{'_log'};
-#	printf "log [%s]\n", Dumper($log);
-	return $log;
+	return $logger;
 }
 
 
@@ -124,29 +161,31 @@ sub _log {
 #}
 
 
-#sub new {
-#	my ($class) = shift;
-#	#my $self = $class->SUPER::new(@_);
-#	my $self = { _permitted => \%attribute, %attribute };
-#
-#	++ ${ $self->{_n_objects} };
-#
-#	bless ($self, $class);
-#
-#	my %args = @_;  # start processing any parameters passed
-#	my ($method,$value);    # start processing any parameters passed
-#	while (($method, $value) = each %args) {
-#
-#		confess "SYNTAX new(method => value, ...) value not specified"
-#		unless (defined $value);
-#
-#		$self->_log->debug("method [self->$method($value)]");
-#
-#		$self->$method($value);
-#	}
-#
-#	return $self;
-#}
+sub loop {
+	my $self = shift;
+	my $retry =  $self->cget('-retry');
+
+	# override silly values for retry which might have been 
+	# configured by a users
+
+	if ($retry <= 0) {
+		$retry = N_RETRY;
+
+		$self->configure('-retry' => $retry);
+
+		$self->_log->debug("-retry reset to [$retry]");
+	}
+
+	while ($retry-- > 0) {
+
+		my $button = $self->Show;
+
+		last if (defined $self->cget('-dbh')
+			|| $button =~ "Cancel");
+	} 
+
+	return $self->cget('-dbh');
+}
 
 
 sub drivers {
@@ -178,24 +217,30 @@ sub sources {
 sub cb_login {
 	my $self = shift;
 	my $button = shift;
+	my $data = $self->privateData;
 
 	$self->_log->debug("button [$button]");
 
 	if ($button eq 'Exit') {
+
 		$self->_log->info("exiting");
+#		&{$self->cget('-exit')};
 		Tk::exit;
+
 	} elsif ($button eq 'Cancel') {
+
 		$self->_log->info("login sequence cancelled");
+
 	} elsif ($button eq 'Login') {
 		$self->_log->debug("attempting to login to database");
 
-		my $data_source = join(':', "DBI", $self->{'driver'}, 
-			defined($self->{'instance'}) ? $self->{'instance'} : ""
+		my $data_source = join(':', "DBI", $data->{'driver'}, 
+			defined($data->{'instance'}) ? $data->{'instance'} : ""
 			);
 
 		$self->_log->debug("data_source [$data_source]");
 
-		my $dbh = DBI->connect($data_source, $self->{'username'}, $self->{'password'});
+		my $dbh = DBI->connect($data_source, $data->{'username'}, $data->{'password'});
 
 		if (defined $dbh) {
 			$self->_log->debug(sprintf "connected okay [%s]", Dumper($dbh));
@@ -220,6 +265,7 @@ sub cb_populate {
 	my $self = shift;
 	my $button = shift;
 	my @drivers = $self->drivers;
+	my $data = $self->privateData;
 
 	$self->_log->debug("button [$button]");
 
@@ -228,8 +274,8 @@ sub cb_populate {
 	$dropdown->configure('-choices', [ @drivers ]);
 
 	for (@drivers) {
-		$self->{'driver'} = $_
-			if ($_ =~ /(Oracle|DB2)/);
+		$data->{'driver'} = $_
+			if ($_ =~ /$data->{'re_driver'}/);
 	}
 
 	my $focus = $self->Subwidget('instance');
@@ -252,6 +298,7 @@ sub cb_populate {
 sub paint {
 	my $self = shift;
 	my $w;
+	my $data = $self->privateData;
 
 	my $d = $self->DialogBox(-title => S_WHATAMI,
 		-buttons => [ qw/ Cancel Exit Login / ],
@@ -277,7 +324,7 @@ sub paint {
 	# add the driver drop-down
 
 	$w = (); $w = $f->BrowseEntry(-state => 'readonly',
-		-variable => \$self->{'driver'},
+		-variable => \$data->{'driver'},
 		)->grid(-row => 1, -column => 2, -sticky => 'w');
 
 	$self->Advertise('driver', $w);
@@ -288,7 +335,7 @@ sub paint {
 	my @entry = qw/ instance username password /;
 	for (my $e = 0; $e < @entry; $e++) {
 
-		$w = (); $w = $f->Entry(-textvariable => \$self->{$entry[$e]},
+		$w = (); $w = $f->Entry(-textvariable => \$data->{$entry[$e]},
 			)->grid(-row => $e + 2, -column => 2, -sticky => 'w');
 
 		$self->Advertise($entry[$e], $w);
@@ -307,29 +354,6 @@ sub paint {
 	$self->Advertise('error', $w);
 
 	return $d;
-}
-
-
-sub dump {
-	my $self = shift;
-	my $w = shift;	# widget
-	my $l = shift;	# level
-
-	$w = $self unless (defined $w);
-	$l = 0 unless (defined $l);
-
-	$self->_log->debug(sprintf "path [%s] level [%d] widget [%s]",
-		$w->PathName,
-		$l++, $w->name,
-	);
-
-	for my $child ($w->children) {
-
-		$self->dump($child, $l);
-	}
-
-	$self->_log->debug(sprintf 'ConfigSpecs [%s]', Dumper($w->Subwidget))
-		if ($l == 1);
 }
 
 
