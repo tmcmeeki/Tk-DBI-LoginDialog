@@ -2,20 +2,6 @@ package Tk::DBI::LoginDialog;
 #
 # Tk::DBI::LoginDialog - DBI login dialog class for Perl/Tk.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published
-# by the Free Software Foundation; either version 2 of the License,
-# or any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-# General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-#
 use 5.014002;
 
 use strict;
@@ -379,6 +365,10 @@ __END__
 
 Tk::DBI::LoginDialog - Perl extension for blah blah blah
 
+=head1 AUTHOR
+
+Copyright (C) 2014  B<Tom McMeekin> E<lt>tmcmeeki@cpan.orgE<gt>
+
 =head1 SYNOPSIS
 
   use Tk::DBI::LoginDialog;
@@ -394,7 +384,7 @@ unedited.
 
 =item B<-label>
 
-Label text to appear next to the Optionmenu.  If I<-labelVariable> is
+Label text to appear next to the LoginDialog.  If I<-labelVariable> is
 also specified, I<-label> takes precedence.
 
 =item B<-labelPack>
@@ -417,15 +407,15 @@ Valid subwidget names are listed below.
 
 Widget reference of Label widget.
 
-=item Name:  optionmenu, Class: Optionmenu
+=item Name:  LoginDialog, Class: LoginDialog
 
-  Widget reference of Optionmenu widget.
+  Widget reference of LoginDialog widget.
 
 =back
 
 =head1 EXAMPLE
 
-I<$lo> = I<$mw>-E<gt>B<LabOptionmenu>(-label =E<gt> 'Ranking:',
+I<$lo> = I<$mw>-E<gt>B<LoginDialog>(-label =E<gt> 'Ranking:',
 -options =E<gt> [1 .. 5], -labelPack =E<gt> [-side => 'left']);
 
 I<$lo>-E<gt>configure(-labelFont =E<gt> [qw/Times 18 italic/]);
@@ -434,9 +424,21 @@ I<$lo>-E<gt>configure(-labelFont =E<gt> [qw/Times 18 italic/]);
 
 ___EUMM_VERSION___
 
-=head1 AUTHOR
+=head1 LICENSE
 
-Copyright (C) 2014  B<Tom McMeekin> tmcmeeki@cpan.org
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published
+by the Free Software Foundation; either version 2 of the License,
+or any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 =head1 SEE ALSO
 

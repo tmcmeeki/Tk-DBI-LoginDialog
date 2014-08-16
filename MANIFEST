@@ -1,6 +1,8 @@
 Changes
+lib/Tk/DBI/LoginDialog.pm
+LICENSE
 Makefile.PL
 MANIFEST
 README
+README.md
 t/tld-tk.t
-lib/Tk/DBI/LoginDialog.pm
