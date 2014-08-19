@@ -25,6 +25,7 @@ Construct Tk::Widget 'LoginDialog';
 
 # package constants
 
+use constant CHAR_MASK => '*';	# masking character
 use constant N_RETRY => 3;	# number of loops to attempt login
 use constant S_NULL => "(null)";
 use constant S_WHATAMI => "Tk::DBI::LoginDialog";
@@ -32,15 +33,13 @@ use constant RE_DRIVER_INSTANCE => "(Oracle|DB2)";
 
 
 # --- package globals ---
-#our $AUTOLOAD;
 our $VERSION = '0.01';
 
 
 # --- package locals ---
 
 
-# sub-routines
-
+# --- sub-routines ---
 sub ClassInit {
 	my ($class,$mw)=@_;
 
@@ -64,25 +63,19 @@ sub Populate {
 	    re_driver => RE_DRIVER_INSTANCE,
 	);
 
-#	$self->ConfigSpecs(
-#	    -logger => [ qw/ PASSIVE logger Logger /, get_logger(S_WHATAMI) ],
-#	    -log => [ qw/ METHOD _log Log /, undef ],
-#	$specs{-dump} = [ qw/ METHOD dump Dump /, undef ];
-#	);
-
 	my $o = $self->paint;
 
 	$self->Advertise('LoginDialog' => $o);
 
-	$specs{-username} = [ qw/ PASSIVE username Username /, undef ];
-	$specs{-password} = [ qw/ PASSIVE password Password /, undef ];
-	$specs{-dbname} = [ qw/ PASSIVE dbname Dbname /, undef ];
-	$specs{-instance} = [ qw/ PASSIVE instance Instance /, undef ];
+	$specs{-username} = [ qw/ METHOD username Username /, undef ];
+	$specs{-password} = [ qw/ METHOD password Password /, undef ];
+	$specs{-dbname} = [ qw/ METHOD dbname Dbname /, undef ];
+	$specs{-instance} = [ qw/ METHOD instance Instance /, undef ];
+	$specs{-driver} = [ qw/ METHOD driver Driver /, undef ];
 	$specs{-dbh} = [ qw/ PASSIVE dbh Dbh /, undef ];
-	$specs{-error} = [ qw/ METHOD error Error /, undef ];
-#	$specs{-exit} = [ qw/ METHOD exit Exit /, sub { Tk::exit; } ];
+	$specs{-mask} = [ qw/ PASSIVE mask Mask /, CHAR_MASK ];
+	$specs{-exit} = [ qw/ CALLBACK exit Exit /, sub { Tk::exit; } ];
 	$specs{-drivers} = [ qw/ METHOD drivers Drivers /, undef ];
-	$specs{-driver} = [ qw/ PASSIVE driver Driver /, undef ];
 	$specs{-retry} = [ qw/ PASSIVE retry Retry /, N_RETRY ];
 	$self->ConfigSpecs(%specs);
 
@@ -93,7 +86,6 @@ sub Populate {
 
 
 # --- private methods ---
-
 sub _dump {
 	my $self = shift;
 	my $w = shift;	# widget
@@ -117,6 +109,21 @@ sub _dump {
 }
 
 
+sub _error {
+	my $self = shift;
+	my $rotext = $self->Subwidget('error');
+
+	unless (@_) {
+		return $rotext->Contents;
+	} else {
+		my $text = join(' ', @_);
+
+		$self->_log->debug("setting status to [$text]");
+		$rotext->Contents($text);
+	}
+}
+
+
 sub _log {
 	my $self = shift;
 	my $logger = $self->privateData->{'logger'};
@@ -127,26 +134,21 @@ sub _log {
 }
 
 
-#sub AUTOLOAD {
-#	my $self = shift;
-#	my $type = ref($self) or croak("self is not an object");
-#
-#	my $name = $AUTOLOAD;
-#	$name =~ s/.*://;   # strip fully−qualified portion
-#
-#	unless (exists $self->{_permitted}->{$name} ) {
-#		warn "no attribute [$name] in class [$type]";
-#		return undef;
-#	}
-#
-#	if (@_) {
-#		return $self->{$name} = shift;
-#	} else {
-#		return $self->{$name};
-#	}
-#}
+sub _default_value {
+	my $self = shift;
+	my $attribute = shift;
+	my $value = shift;
+	my $data = $self->privateData;
+
+	if (defined $value) {
+		$data->{$attribute} = $value;
+		return $value;
+	}
+	return $data->{$attribute};
+}
 
 
+# --- public methods ---
 sub loop {
 	my $self = shift;
 	my $retry =  $self->cget('-retry');
@@ -200,6 +202,34 @@ sub sources {
 }
 
 
+sub instance {
+	my $self = shift;
+	
+	$self->_default_value('instance', shift);
+}
+
+
+sub username {
+	my $self = shift;
+	
+	$self->_default_value('username', shift);
+}
+
+
+sub password {
+	my $self = shift;
+	
+	$self->_default_value('password', shift);
+}
+
+
+sub dbname {
+	my $self = shift;
+	
+	$self->_default_value('dbname', shift);
+}
+
+
 sub cb_login {
 	my $self = shift;
 	my $button = shift;
@@ -209,9 +239,7 @@ sub cb_login {
 
 	if ($button eq 'Exit') {
 
-		$self->_log->info("exiting");
-#		&{$self->cget('-exit')};
-		Tk::exit;
+		$self->Callback('-exit');
 
 	} elsif ($button eq 'Cancel') {
 
@@ -230,11 +258,11 @@ sub cb_login {
 
 		if (defined $dbh) {
 			$self->_log->debug(sprintf "connected okay [%s]", Dumper($dbh));
-			$self->error("Connected okay.");
+			$self->_error("Connected okay.");
 			$self->configure("-dbh" => $dbh);
 		} else {
 			$self->_log->logwarn($DBI::errstr);
-			$self->error($DBI::errstr);
+			$self->_error($DBI::errstr);
 
 			$self->toplevel->messageBox(
 				-message => $DBI::errstr,
@@ -253,7 +281,7 @@ sub cb_populate {
 	my @drivers = $self->drivers;
 	my $data = $self->privateData;
 
-	$self->_log->debug("button [$button]");
+	$self->_log->debug(sprintf "self [%s]", $self->PathName);
 
 	my $dropdown = $self->Subwidget('driver');
 
@@ -264,12 +292,18 @@ sub cb_populate {
 			if ($_ =~ /$data->{'re_driver'}/);
 	}
 
-	my $focus = $self->Subwidget('instance');
+	my $w; for (qw/ instance username password /) {
 
-	$self->_log->debug($self->PathName);
-	$self->_log->debug($focus->PathName);
+		$w = $self->Subwidget($_);
 
-	$self->configure(-focus => $focus);
+		last if ($self->$_ eq "");
+	}
+	$self->_log->debug(sprintf "setting focus to [%s]", $w->PathName);
+	$w->focus;
+
+	my $pw = $self->Subwidget('password');
+	my $mask = $self->cget('-mask');
+	$pw->configure(-show => $mask);
 }
 
 
@@ -325,11 +359,7 @@ sub paint {
 			)->grid(-row => $e + 2, -column => 2, -sticky => 'w');
 
 		$self->Advertise($entry[$e], $w);
-
-		$d->configure(-focus => $w)
-			if ($e == 0);
 	}
-
 
 	# add the error/status field at the bottom
 
@@ -340,21 +370,6 @@ sub paint {
 	$self->Advertise('error', $w);
 
 	return $d;
-}
-
-
-sub error {
-	my $self = shift;
-	my $rotext = $self->Subwidget('error');
-
-	unless (@_) {
-		return $rotext->Contents;
-	} else {
-		my $text = join(' ', @_);
-
-		$self->_log->debug("setting status to [$text]");
-		$rotext->Contents($text);
-	}
 }
 
 

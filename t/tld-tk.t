@@ -66,8 +66,9 @@ is($@, "", "destroy $c_this");
 isnt(Tk::Exists($tld1), 1, "destroyed $c_this");
 
 my $tld2 = $top->LoginDialog(-instance => 'XE');
-$tld2->_log->info("hello");
-$tld2->_dump;
+#my $tld2 = $top->LoginDialog;
+#$tld2->_dump;
+#$tld2->username('scott');
 #eval { $tld2->Show; };
 #is($@, "", "Show $c_this");
 #
@@ -75,6 +76,6 @@ $tld2->_dump;
 
 my $dbh = $tld2->loop;
 isa_ok( $dbh, "DBI::db", "got handle");
-$log->debug(sprintf "error [%s]", $tld2->error);
+$log->debug(sprintf "error [%s]", $tld2->_error);
 $log->info("exiting test.");
 
