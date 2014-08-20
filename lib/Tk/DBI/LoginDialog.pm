@@ -1,7 +1,38 @@
 package Tk::DBI::LoginDialog;
-#
-# Tk::DBI::LoginDialog - DBI login dialog class for Perl/Tk.
-#
+
+=head1 NAME
+
+Tk::DBI::LoginDialog - DBI login dialog class for Perl/Tk.
+
+=head1 AUTHOR
+
+Copyright (C) 2014  B<Tom McMeekin> E<lt>tmcmeeki@cpan.orgE<gt>
+
+=head1 SYNOPSIS
+
+  use Tk::DBI::LoginDialog;
+
+  my $top = new MainWindow;
+
+  my $d = $top->LoginDialog(-instance => 'XE');
+ 
+  my $dbh = $d->login;
+
+  print $d->error . "\n"
+	unless defined($dbh);
+
+=head1 DESCRIPTION
+
+"Tk::DBI::LoginDialog" is a dialog widget which interacts with the DBI
+interface specifically to attempt a connection to a database, and thus
+returning a database handle.
+
+This widget allows the user to enter username and password details
+into the dialog, and also to select driver, and other driver-specific
+details where necessary.
+
+=cut
+
 use 5.014002;
 
 use strict;
@@ -16,7 +47,6 @@ use Log::Log4perl qw/ get_logger /;
 # based on Tk widget writers advice at:
 #    http://docstore.mik.ua/orelly/perl3/tk/ch14_01.htm
 
-#use Tk;
 use Tk::widgets qw/ DialogBox Label Entry BrowseEntry ROText /;
 use base qw/ Tk::Toplevel /;
 
@@ -39,7 +69,7 @@ our $VERSION = '0.01';
 # --- package locals ---
 
 
-# --- sub-routines ---
+# --- Tk standard routines ---
 sub ClassInit {
 	my ($class,$mw)=@_;
 
@@ -57,26 +87,50 @@ sub Populate {
 	%$attribute = (
 	    logger => get_logger(S_WHATAMI),
 	    driver => "",
+	    dbh => undef,
 	    instance => "",
 	    username => "",
 	    password => "",
 	    re_driver => RE_DRIVER_INSTANCE,
 	);
 
-	my $o = $self->paint;
+	my $o = $self->_paint;
 
 	$self->Advertise('LoginDialog' => $o);
 
-	$specs{-username} = [ qw/ METHOD username Username /, undef ];
-	$specs{-password} = [ qw/ METHOD password Password /, undef ];
+	$specs{-dbh} = [ qw/ METHOD dbh Dbh /, undef ];
 	$specs{-dbname} = [ qw/ METHOD dbname Dbname /, undef ];
-	$specs{-instance} = [ qw/ METHOD instance Instance /, undef ];
 	$specs{-driver} = [ qw/ METHOD driver Driver /, undef ];
-	$specs{-dbh} = [ qw/ PASSIVE dbh Dbh /, undef ];
+	$specs{-instance} = [ qw/ METHOD instance Instance /, undef ];
+	$specs{-password} = [ qw/ METHOD password Password /, undef ];
+	$specs{-username} = [ qw/ METHOD username Username /, undef ];
+
+=head1 OPTIONS
+
+C<LoginDialog> provides the following specific options:
+
+=over 4
+
+=item B<-mask>
+
+The character or string used to hide (mask) the password.
+
+=cut
+
 	$specs{-mask} = [ qw/ PASSIVE mask Mask /, CHAR_MASK ];
-	$specs{-exit} = [ qw/ CALLBACK exit Exit /, sub { Tk::exit; } ];
-	$specs{-drivers} = [ qw/ METHOD drivers Drivers /, undef ];
+
+=item B<-retry>
+
+The number of times that attempts will be made to login to the database
+before giving up.  A default applies.
+
+=back
+
+=cut
 	$specs{-retry} = [ qw/ PASSIVE retry Retry /, N_RETRY ];
+
+	$specs{-exit} = [ qw/ CALLBACK exit Exit /, sub { Tk::exit; } ];
+
 	$self->ConfigSpecs(%specs);
 
 	$self->ConfigSpecs('DEFAULT' => [$o]);
@@ -86,6 +140,20 @@ sub Populate {
 
 
 # --- private methods ---
+sub _default_value {
+	my $self = shift;
+	my $attribute = shift;
+	my $value = shift;
+	my $data = $self->privateData;
+
+	if (defined $value) {
+		$data->{$attribute} = $value;
+		return $value;
+	}
+	return $data->{$attribute};
+}
+
+
 sub _dump {
 	my $self = shift;
 	my $w = shift;	# widget
@@ -113,209 +181,31 @@ sub _error {
 	my $self = shift;
 	my $rotext = $self->Subwidget('error');
 
-	unless (@_) {
-		return $rotext->Contents;
-	} else {
-		my $text = join(' ', @_);
-
-		$self->_log->debug("setting status to [$text]");
-		$rotext->Contents($text);
+	if (@_) {
+		$rotext->Contents(join(' ', @_));
 	}
+
+	my $s_text = $rotext->Contents;
+
+	chomp($s_text);
+
+	return $s_text;
 }
 
 
 sub _log {
-	my $self = shift;
-	my $logger = $self->privateData->{'logger'};
-
-#	my $log = $self->cget('-logger');
-#	my $log = $self->{'_log'};
-	return $logger;
+	return shift->privateData->{'logger'};
 }
 
 
-sub _default_value {
-	my $self = shift;
-	my $attribute = shift;
-	my $value = shift;
-	my $data = $self->privateData;
-
-	if (defined $value) {
-		$data->{$attribute} = $value;
-		return $value;
-	}
-	return $data->{$attribute};
-}
-
-
-# --- public methods ---
-sub loop {
-	my $self = shift;
-	my $retry =  $self->cget('-retry');
-
-	# override silly values for retry which might have been 
-	# configured by a users
-
-	if ($retry <= 0) {
-		$retry = N_RETRY;
-
-		$self->configure('-retry' => $retry);
-
-		$self->_log->debug("-retry reset to [$retry]");
-	}
-
-	while ($retry-- > 0) {
-
-		my $button = $self->Show;
-
-		last if (defined $self->cget('-dbh')
-			|| $button =~ "Cancel");
-	} 
-
-	return $self->cget('-dbh');
-}
-
-
-sub drivers {
-	my $self = shift;
-
-	my @driver_names = DBI->available_drivers;
-
-	for (@driver_names) {
-		$self->_log->info("driver [$_]\n");
-	}
-
-	return @driver_names;
-}
-
-
-sub sources {
-	my $self = shift;
-	my $driver = shift;
-
-	$self->_log->logcroak("SYNTAX: sources(driver)") unless defined($driver);
-#	my @data_sources = DBI->data_sources($driver);
-#
-#	for (@data_sources) {
-#		$self->_log->info("source [$_]\n");
-#	}
-}
-
-
-sub instance {
-	my $self = shift;
-	
-	$self->_default_value('instance', shift);
-}
-
-
-sub username {
-	my $self = shift;
-	
-	$self->_default_value('username', shift);
-}
-
-
-sub password {
-	my $self = shift;
-	
-	$self->_default_value('password', shift);
-}
-
-
-sub dbname {
-	my $self = shift;
-	
-	$self->_default_value('dbname', shift);
-}
-
-
-sub cb_login {
-	my $self = shift;
-	my $button = shift;
-	my $data = $self->privateData;
-
-	$self->_log->debug("button [$button]");
-
-	if ($button eq 'Exit') {
-
-		$self->Callback('-exit');
-
-	} elsif ($button eq 'Cancel') {
-
-		$self->_log->info("login sequence cancelled");
-
-	} elsif ($button eq 'Login') {
-		$self->_log->debug("attempting to login to database");
-
-		my $data_source = join(':', "DBI", $data->{'driver'}, 
-			defined($data->{'instance'}) ? $data->{'instance'} : ""
-			);
-
-		$self->_log->debug("data_source [$data_source]");
-
-		my $dbh = DBI->connect($data_source, $data->{'username'}, $data->{'password'});
-
-		if (defined $dbh) {
-			$self->_log->debug(sprintf "connected okay [%s]", Dumper($dbh));
-			$self->_error("Connected okay.");
-			$self->configure("-dbh" => $dbh);
-		} else {
-			$self->_log->logwarn($DBI::errstr);
-			$self->_error($DBI::errstr);
-
-			$self->toplevel->messageBox(
-				-message => $DBI::errstr,
-				-title => S_WHATAMI,
-			);
-		}
-	} else {
-		$self->_log->logcroak("ERROR invalid action [$button]");
-	}
-}
-
-
-sub cb_populate {
-	my $self = shift;
-	my $button = shift;
-	my @drivers = $self->drivers;
-	my $data = $self->privateData;
-
-	$self->_log->debug(sprintf "self [%s]", $self->PathName);
-
-	my $dropdown = $self->Subwidget('driver');
-
-	$dropdown->configure('-choices', [ @drivers ]);
-
-	for (@drivers) {
-		$data->{'driver'} = $_
-			if ($_ =~ /$data->{'re_driver'}/);
-	}
-
-	my $w; for (qw/ instance username password /) {
-
-		$w = $self->Subwidget($_);
-
-		last if ($self->$_ eq "");
-	}
-	$self->_log->debug(sprintf "setting focus to [%s]", $w->PathName);
-	$w->focus;
-
-	my $pw = $self->Subwidget('password');
-	my $mask = $self->cget('-mask');
-	$pw->configure(-show => $mask);
-}
-
-
-# +-----------------------+
-# | label | BrowseEntry   |
-# +-----------------------+
-# | label | Entry x 3     |
-# +-----------------------+
-# | ROText (error)        |
-# +-----------------------+
-
-sub paint {
+sub _paint {
+#	+-----------------------+
+#	| label | BrowseEntry   |
+#	+-----------------------+
+#	| label | Entry x 3     |
+#	+-----------------------+
+#	| ROText (error)        |
+#	+-----------------------+
 	my $self = shift;
 	my $w;
 	my $data = $self->privateData;
@@ -347,8 +237,29 @@ sub paint {
 		-variable => \$data->{'driver'},
 		)->grid(-row => 1, -column => 2, -sticky => 'w');
 
+
 	$self->Advertise('driver', $w);
 
+=head1 ADVERTISED WIDGETS
+
+Component subwidgets can be accessed via the B<Subwidget> method.
+Valid subwidget names are listed below.
+
+=over 4
+
+=item Name:  driver, Class: BrowseEntry
+
+Widget reference of B<driver> drop-down widget.
+
+=item Name:  instance, Class: Entry
+
+=item Name:  username, Class: Entry
+
+=item Name:  password, Class: Entry
+
+Widget reference for the basic credential entry widgets.
+
+=cut
 
 	# add some entry fields on the right side 
 
@@ -361,6 +272,13 @@ sub paint {
 		$self->Advertise($entry[$e], $w);
 	}
 
+=item Name:  error, Class: ROText
+
+Widget reference of the status/error message widget.
+
+=back
+
+=cut
 	# add the error/status field at the bottom
 
 	$w = (); $w = $f->ROText( -height => 3, -width => 40,
@@ -373,67 +291,193 @@ sub paint {
 }
 
 
-1;
-__END__
+# --- callbacks ---
+sub cb_login {
+	my $self = shift;
+	my $button = shift;
+	my $data = $self->privateData;
 
-=head1 NAME
+	$self->_log->debug("button [$button]");
 
-Tk::DBI::LoginDialog - Perl extension for blah blah blah
+	if ($button eq 'Exit') {
 
-=head1 AUTHOR
+		$self->Callback('-exit');
 
-Copyright (C) 2014  B<Tom McMeekin> E<lt>tmcmeeki@cpan.orgE<gt>
+	} elsif ($button eq 'Cancel') {
 
-=head1 SYNOPSIS
+		$self->_log->info("login sequence cancelled");
 
-  use Tk::DBI::LoginDialog;
-  blah blah blah
+	} elsif ($button eq 'Login') {
+		$self->_log->debug("attempting to login to database");
 
-=head1 DESCRIPTION
+		my $data_source = join(':', "DBI", $data->{'driver'}, 
+			defined($data->{'instance'}) ? $data->{'instance'} : ""
+			);
 
-Stub documentation for Tk::DBI::LoginDialog, created by h2xs. It looks like the
-author of the extension was negligent enough to leave the stub
-unedited.
+		$self->_log->debug("data_source [$data_source]");
 
-=over 4
+		my $dbh = DBI->connect($data_source, $data->{'username'}, $data->{'password'});
 
-=item B<-label>
+		if (defined $dbh) {
+			$data->{'dbh'} = $dbh;
+			$self->_error("Connected okay.");
+		} else {
+			$self->_log->logwarn($DBI::errstr);
+			$self->_error($DBI::errstr);
+		}
+	} else {
+		$self->_log->logcroak("ERROR invalid action [$button]");
+	}
+}
 
-Label text to appear next to the LoginDialog.  If I<-labelVariable> is
-also specified, I<-label> takes precedence.
 
-=item B<-labelPack>
+sub cb_populate {
+	my $self = shift;
+	my $button = shift;
+	my @drivers = DBI->available_drivers;
+	my $data = $self->privateData;
 
+	$self->_log->debug(sprintf "self [%s]", $self->PathName);
 
-=back
+	my $dropdown = $self->Subwidget('driver');
+
+	$dropdown->configure('-choices', [ @drivers ]);
+
+	for (@drivers) {
+		$data->{'driver'} = $_
+			if ($_ =~ /$data->{'re_driver'}/);
+	}
+
+	my $w; for (qw/ instance username password /) {
+
+		$w = $self->Subwidget($_);
+
+		last if ($self->$_ eq "");
+	}
+	$self->_log->debug(sprintf "setting focus to [%s]", $w->PathName);
+	$w->focus;
+
+	my $pw = $self->Subwidget('password');
+	my $mask = $self->cget('-mask');
+	$pw->configure(-show => $mask);
+}
+
 
 =head1 METHODS
 
-None.
-
-=head1 ADVERTISED WIDGETS
-
-Component subwidgets can be accessed via the B<Subwidget> method.
-Valid subwidget names are listed below.
-
 =over 4
 
-=item Name:  label, Class: Label
+=item B<dbh>
 
-Widget reference of Label widget.
+Returns the database handle associated with the current object.
 
-=item Name:  LoginDialog, Class: LoginDialog
+=cut
 
-  Widget reference of LoginDialog widget.
+sub dbh {
+	return shift->_default_value('dbh');
+}
+
+
+=item B<dbname>
+
+Set or return the B<database name> variable.
+May not be applicable for all driver types.
+
+=cut
+
+sub dbname {
+	return shift->_default_value('dbname', shift);
+}
+
+
+=item B<error>
+
+Return the latest error message from the DBI framework following an
+attempt to connect via the specified driver.  If last connection
+attempt was successful, this will return "Connected okay."
+
+=cut
+
+sub error {
+	return shift->_error;
+}
+
+
+=item B<password>
+
+Set or return the B<password> variable.
+May not be applicable for all driver types.
+
+=cut
+
+sub password {
+	return shift->_default_value('password', shift);
+}
+
+
+=item B<instance>
+
+Set or return the B<instance> variable.
+May not be applicable for all driver types.
+
+=cut
+
+sub instance {
+	return shift->_default_value('instance', shift);
+}
+
+
+=item B<username>
+
+Set or return the B<username> variable.
+May not be applicable for all driver types.
+
+=cut
+
+sub username {
+	return shift->_default_value('username', shift);
+}
+
+
+=item B<login>([RETRY])
+
+A convenience function to show the login dialog and attempt connection.
+The number of attempts is prescribed by the B<RETRY> parameter, which is
+optional.
+Returns a DBI database handle, subject to the DBI B<connect> method.
+
+=cut
+
+sub login {
+	my $self = shift;
+	my $retry = (@_) ? shift : $self->cget('-retry');
+
+	# override silly values for retry which might have been 
+	# configured by the calling application
+
+	if ($retry <= 0) {
+		$retry = N_RETRY;
+
+		$self->configure('-retry' => $retry);
+
+		$self->_log->debug("-retry reset to [$retry]");
+	}
+
+	while ($retry-- > 0) {
+
+		my $button = $self->Show;
+
+		last if (defined $self->dbh || $button =~ "Cancel");
+	} 
+
+	return $self->dbh;
+}
+
+
+1;
+__END__
 
 =back
-
-=head1 EXAMPLE
-
-I<$lo> = I<$mw>-E<gt>B<LoginDialog>(-label =E<gt> 'Ranking:',
--options =E<gt> [1 .. 5], -labelPack =E<gt> [-side => 'left']);
-
-I<$lo>-E<gt>configure(-labelFont =E<gt> [qw/Times 18 italic/]);
 
 =head1 VERSION
 
@@ -457,7 +501,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 =head1 SEE ALSO
 
-L<perl>, DBI, Tk.
+L<perl>, L<DBI>, L<Tk>.
 
 =cut
 

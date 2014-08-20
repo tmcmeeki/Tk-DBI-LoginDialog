@@ -27,7 +27,7 @@ use strict;
 use warnings;
 
 use Log::Log4perl qw/ :easy /;
-use Test::More tests => 2;
+use Test::More tests => 9;
 use Tk;
 use Data::Dumper;
 
@@ -74,8 +74,9 @@ my $tld2 = $top->LoginDialog(-instance => 'XE');
 #
 #$tld2->Exit('Cancel');
 
-my $dbh = $tld2->loop;
+my $dbh = $tld2->login;
 isa_ok( $dbh, "DBI::db", "got handle");
-$log->debug(sprintf "error [%s]", $tld2->_error);
+$log->debug(sprintf "error [%s]", $tld2->error);
+like($tld2->error, qr/onnected/,	"error");
 $log->info("exiting test.");
 
