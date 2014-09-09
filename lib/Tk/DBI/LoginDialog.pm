@@ -4,10 +4,6 @@ package Tk::DBI::LoginDialog;
 
 Tk::DBI::LoginDialog - DBI login dialog class for Perl/Tk.
 
-=head1 AUTHOR
-
-Copyright (C) 2014  B<Tom McMeekin> E<lt>tmcmeeki@cpan.orgE<gt>
-
 =head1 SYNOPSIS
 
   use Tk::DBI::LoginDialog;
@@ -16,7 +12,7 @@ Copyright (C) 2014  B<Tom McMeekin> E<lt>tmcmeeki@cpan.orgE<gt>
 
   my $d = $top->LoginDialog(-instance => 'XE');
  
-  my $dbh = $d->login;
+  my $dbh = $d->Show;
 
   print $d->error . "\n"
 	unless defined($dbh);
@@ -31,6 +27,14 @@ This widget allows the user to enter username and password details
 into the dialog, and also to select driver, and other driver-specific
 details where necessary.
 
+The dialog presents three buttons as follows:
+
+  Cancel: hides the dialog without further processing or interaction.
+
+  Exit: calls the defined exit routine.  See L<CALLBACKS>.
+
+  Login: attempt to login via DBI with the credentials supplied.
+
 =cut
 
 use 5.014002;
@@ -41,7 +45,6 @@ use warnings;
 use Carp qw(cluck confess);     # only use stack backtrace within class
 use Data::Dumper;
 use DBI;
-use File::Basename;
 use Log::Log4perl qw/ get_logger /;
 
 # based on Tk widget writers advice at:
@@ -63,7 +66,7 @@ use constant RE_DRIVER_INSTANCE => "(Oracle|DB2)";
 
 
 # --- package globals ---
-our $VERSION = '0.01';
+our $VERSION = '1.001';
 
 
 # --- package locals ---
@@ -105,7 +108,7 @@ sub Populate {
 	$specs{-password} = [ qw/ METHOD password Password /, undef ];
 	$specs{-username} = [ qw/ METHOD username Username /, undef ];
 
-=head1 OPTIONS
+=head1 WIDGET-SPECIFIC OPTIONS
 
 C<LoginDialog> provides the following specific options:
 
@@ -128,6 +131,21 @@ before giving up.  A default applies.
 
 =cut
 	$specs{-retry} = [ qw/ PASSIVE retry Retry /, N_RETRY ];
+
+=head1 CALLBACKS
+
+C<LoginDialog> provides the following callbacks:
+
+=over 4
+
+=item B<-exit>
+
+The sub-routine to call when the B<Exit> button is pressed.
+Defaults to B<Tk::exit>.
+
+=back
+
+=cut
 
 	$specs{-exit} = [ qw/ CALLBACK exit Exit /, sub { Tk::exit; } ];
 
@@ -209,9 +227,10 @@ sub _paint {
 	my $self = shift;
 	my $w;
 	my $data = $self->privateData;
+	my @buttons = qw/ Cancel Exit Login /;
 
 	my $d = $self->DialogBox(-title => S_WHATAMI,
-		-buttons => [ qw/ Cancel Exit Login / ],
+		-buttons => [ @buttons ],
 		-default_button => 'Login',
 		-command => [ \&cb_login, $self ],
 		-showcommand => [ \&cb_populate, $self ],
@@ -257,7 +276,7 @@ Widget reference of B<driver> drop-down widget.
 
 =item Name:  password, Class: Entry
 
-Widget reference for the basic credential entry widgets.
+Widget references for the basic credential entry widgets.
 
 =cut
 
@@ -276,8 +295,6 @@ Widget reference for the basic credential entry widgets.
 
 Widget reference of the status/error message widget.
 
-=back
-
 =cut
 	# add the error/status field at the bottom
 
@@ -286,6 +303,26 @@ Widget reference of the status/error message widget.
 		)->grid(-row => 5, -column => 1, -columnspan => 2);
 
 	$self->Advertise('error', $w);
+
+=item Name:  B_Cancel, Class: Button
+
+=item Name:  B_Exit, Class: Button
+
+=item Name:  B_Login, Class: Button
+
+Widget references of the three dialog buttons.
+
+=back
+
+=cut
+
+	for (@buttons) {
+		my $button = "B_" . $_;
+
+		$self->_log->debug("advertising [$button]");
+
+		$self->Advertise($button, $d->Subwidget($button));
+	}
 
 	return $d;
 }
@@ -305,7 +342,7 @@ sub cb_login {
 
 	} elsif ($button eq 'Cancel') {
 
-		$self->_log->info("login sequence cancelled");
+		$self->_log->debug("login sequence cancelled");
 
 	} elsif ($button eq 'Login') {
 		$self->_log->debug("attempting to login to database");
@@ -363,6 +400,7 @@ sub cb_populate {
 }
 
 
+# --- public methods ---
 =head1 METHODS
 
 =over 4
@@ -446,6 +484,10 @@ The number of attempts is prescribed by the B<RETRY> parameter, which is
 optional.
 Returns a DBI database handle, subject to the DBI B<connect> method.
 
+=item B<Show>
+
+The Show method is an alias of the login method, and takes the same parameters.
+
 =cut
 
 sub login {
@@ -482,6 +524,10 @@ __END__
 =head1 VERSION
 
 ___EUMM_VERSION___
+
+=head1 AUTHOR
+
+Copyright (C) 2014  B<Tom McMeekin> E<lt>tmcmeeki@cpan.orgE<gt>
 
 =head1 LICENSE
 

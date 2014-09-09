@@ -4,7 +4,7 @@ use ExtUtils::MakeMaker;
 # the contents of the Makefile that is written.
 
 my $preop = 'find $(DISTVNAME) -type f -exec egrep -q ___EUMM_VERSION___ {} \; -exec sed -i "s/___EUMM_VERSION___/Build V$(VERSION)/" {} \; -print ;' .
-'perldoc -uT $(DISTVNAME)/$(VERSION_FROM) > README.pod';
+'perldoc -uT $(DISTVNAME)/$(VERSION_FROM) > $(DISTVNAME)/README.pod';
 
 WriteMakefile(
     NAME              => 'Tk::DBI::LoginDialog',
@@ -13,7 +13,6 @@ WriteMakefile(
         'Carp' => '0',
         'Data::Dumper' => '0',
         'DBI' => '0',
-        'File::Basename' => '0',
         'Log::Log4perl' => '0',
         'Tk' => '0',
         'Tk::DialogBox' => '0',
@@ -21,7 +20,6 @@ WriteMakefile(
         'Tk::Label' => '0',
         'Tk::Entry' => '0',
         'Tk::ROText' => '0',
-        'Tk::messageBox' => '0',
     }, # e.g., Module::Name => 1.1
 
     ($] >= 5.005 ?     ## Add these new keywords supported since 5.005

@@ -2,7 +2,7 @@
 # `make test'. After `make install' it should work as `perl Tk-DBI-LoginDialog.t'
 #!/usr/bin/perl
 #
-# tld1-tk.t - test harness for module Tk::DBI::LoginDialog
+# 00basic.t - test harness for module Tk::DBI::LoginDialog
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published
@@ -26,10 +26,9 @@ use strict;
 use warnings;
 
 use Log::Log4perl qw/ :easy /;
-use Test::More tests => 9;
-use Tk;
-use Data::Dumper;
+use Test::More tests => 4;
 
+use constant TIMEOUT => 500; # unit: ms
 
 BEGIN { use_ok('Tk::DBI::LoginDialog') };
 
@@ -39,43 +38,22 @@ BEGIN { use_ok('Tk::DBI::LoginDialog') };
 # its man page ( perldoc Test::More ) for help writing this test script.
 
 # ---- globals ----
-
-# ---- main ----
 Log::Log4perl->easy_init($DEBUG);
 my $log = get_logger(__FILE__);
-
-#my $ld = Tk::DBI::LoginDialog->new();
 my $c_this = 'Tk::DBI::LoginDialog';
+my $action = "Cancel";
 
+# ---- main ----
 my $top = new MainWindow;
-my $tld1 = $top->LoginDialog;
-#$log->debug(sprintf "tld1 [%s]", Dumper($tld1));
-isa_ok( $tld1, $c_this, "new no parm");
-is( Tk::Exists($tld1), 1,	"exists");
+#$top->withdraw;
 
-eval { my @dummy = $tld1->configure; };
-is($@, "", "configure $c_this");
+my $ld = $top->LoginDialog;
+isa_ok($ld, $c_this, "new no parm");
 
-eval { $tld1->update; };
-is($@, "", "update $c_this");
+my $b_cancel = $ld->Subwidget("B_$action");
+$b_cancel->after(TIMEOUT, sub{ $b_cancel->invoke; });
+is($ld->Show, $action,	"show $action");
 
-eval { $tld1->destroy; };
-is($@, "", "destroy $c_this");
-
-isnt(Tk::Exists($tld1), 1, "destroyed $c_this");
-
-my $tld2 = $top->LoginDialog(-instance => 'XE');
-#my $tld2 = $top->LoginDialog;
-#$tld2->_dump;
-#$tld2->username('scott');
-#eval { $tld2->Show; };
-#is($@, "", "Show $c_this");
-#
-#$tld2->Exit('Cancel');
-
-my $dbh = $tld2->login;
-isa_ok( $dbh, "DBI::db", "got handle");
-$log->debug(sprintf "error [%s]", $tld2->error);
-like($tld2->error, qr/onnected/,	"error");
-$log->info("exiting test.");
+$ld->destroy;
+ok(Tk::Exists($ld) == 0,	"destroy");
 
