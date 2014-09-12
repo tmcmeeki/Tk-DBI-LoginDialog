@@ -25,9 +25,9 @@ DEPENDENCIES
 
 This module requires these other modules and libraries:
 
-   Carp Data::Dumper DBI File::Basename Log::Log4perl
+   Carp Data::Dumper DBI Log::Log4perl
    Tk Tk::Label Tk::Entry Tk::ROText Tk::BrowseEntry
-   Tk::DialogBox Tk::messageBox
+   Tk::DialogBox
 
 COPYRIGHT AND LICENCE
 

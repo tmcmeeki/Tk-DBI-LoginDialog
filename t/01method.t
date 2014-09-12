@@ -1,8 +1,8 @@
 #!/usr/bin/perl
 # Before `make install' is performed this script should be runnable with
-# `make test'. After `make install' it should work as `perl tld1-tk.t'
+# `make test'. After `make install' it should work as `perl 01method.t'
 #
-# tld1-tk.t - test harness for module Tk::DBI::LoginDialog
+# 01method.t - test harness for module Tk::DBI::LoginDialog
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published
@@ -26,7 +26,7 @@ use strict;
 use warnings;
 
 use Log::Log4perl qw/ :easy /;
-use Test::More tests => 9;
+use Test::More tests => 23;
 use Tk;
 use Data::Dumper;
 
@@ -39,43 +39,47 @@ BEGIN { use_ok('Tk::DBI::LoginDialog') };
 # its man page ( perldoc Test::More ) for help writing this test script.
 
 # ---- globals ----
-
-# ---- main ----
 Log::Log4perl->easy_init($DEBUG);
 my $log = get_logger(__FILE__);
 
-#my $ld = Tk::DBI::LoginDialog->new();
+
+# ---- main ----
 my $c_this = 'Tk::DBI::LoginDialog';
 
 my $top = new MainWindow;
-my $tld1 = $top->LoginDialog;
-#$log->debug(sprintf "tld1 [%s]", Dumper($tld1));
-isa_ok( $tld1, $c_this, "new no parm");
-is( Tk::Exists($tld1), 1,	"exists");
+my $ld0 = $top->LoginDialog;
 
-eval { my @dummy = $tld1->configure; };
-is($@, "", "configure $c_this");
+isa_ok( $ld0, $c_this, "new no parm");
+is( Tk::Exists($ld0), 1,	"exists");
 
-eval { $tld1->update; };
+eval { $ld0->update; };
 is($@, "", "update $c_this");
 
-eval { $tld1->destroy; };
+eval { $ld0->destroy; };
 is($@, "", "destroy $c_this");
 
-isnt(Tk::Exists($tld1), 1, "destroyed $c_this");
+isnt(Tk::Exists($ld0), 1, "destroyed $c_this");
 
-my $tld2 = $top->LoginDialog(-instance => 'XE');
-#my $tld2 = $top->LoginDialog;
-#$tld2->_dump;
-#$tld2->username('scott');
-#eval { $tld2->Show; };
-#is($@, "", "Show $c_this");
-#
-#$tld2->Exit('Cancel');
+my $ld1 = $top->LoginDialog;
+isa_ok( $ld1, $c_this, "new no parm");
 
-my $dbh = $tld2->login;
-isa_ok( $dbh, "DBI::db", "got handle");
-$log->debug(sprintf "error [%s]", $tld2->error);
-like($tld2->error, qr/onnected/,	"error");
-$log->info("exiting test.");
+for my $method (qw/ driver dbname password instance username /) {
+
+	my $condition = "method get $method";
+	my $value = $ld1->$method;
+	is($value, "",			$condition);
+
+	$condition = "method set $method";
+	$value = $ld1->$method("DUMMY");
+	ok($value eq "DUMMY",			$condition);
+}
+
+for my $option (qw/ -mask -retry /) {
+	my $value = $ld1->cget($option);
+	isnt($value, "",	"option get $option");
+
+	isa_ok($ld1->configure($option => "X"), "ARRAY", "option configure $option");
+	$value = $ld1->cget($option);
+	is($value, "X",	"option verify $option");
+}
 

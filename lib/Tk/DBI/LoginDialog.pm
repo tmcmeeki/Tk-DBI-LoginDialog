@@ -98,6 +98,7 @@ sub Populate {
 	    logger => get_logger(S_WHATAMI),
 	    driver => "",
 	    dbh => undef,
+	    dbname => "",
 	    instance => "",
 	    username => "",
 	    password => "",

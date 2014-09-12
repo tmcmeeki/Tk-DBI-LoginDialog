@@ -26,7 +26,7 @@ use strict;
 use warnings;
 
 use Log::Log4perl qw/ :easy /;
-use Test::More tests => 9;
+use Test::More tests => 10;
 
 use constant TIMEOUT => 250; # unit: ms
 
@@ -79,6 +79,7 @@ isa_ok($ld->dbh, "DBI::db",	"non-null dbh");
 
 # ---- loop ----
 queue_button($ld, "Login", "l");
+like($ld->error, qr/onnected/,        "error");
 
 # ---- clean-up ----
 $ld->destroy;
