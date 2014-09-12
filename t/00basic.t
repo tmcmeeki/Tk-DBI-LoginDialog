@@ -1,6 +1,6 @@
-# Before `make install' is performed this script should be runnable with
-# `make test'. After `make install' it should work as `perl Tk-DBI-LoginDialog.t'
 #!/usr/bin/perl
+# Before `make install' is performed this script should be runnable with
+# `make test'. After `make install' it should work as `perl 00basic.t'
 #
 # 00basic.t - test harness for module Tk::DBI::LoginDialog
 #
@@ -26,9 +26,24 @@ use strict;
 use warnings;
 
 use Log::Log4perl qw/ :easy /;
-use Test::More tests => 4;
+use Test::More tests => 9;
 
-use constant TIMEOUT => 500; # unit: ms
+use constant TIMEOUT => 250; # unit: ms
+
+sub queue_button {
+	my ($o,$action,$method)=@_;
+
+	my $button = $o->Subwidget("B_$action");
+
+	$button->after(TIMEOUT, sub{ $button->invoke; });
+
+	if ($method eq "s") {
+		is($o->Show, $action,		"show $action");
+	} else {
+		isa_ok($o->login(1), "DBI::db",	"$action");
+	}
+}
+
 
 BEGIN { use_ok('Tk::DBI::LoginDialog') };
 
@@ -41,19 +56,31 @@ BEGIN { use_ok('Tk::DBI::LoginDialog') };
 Log::Log4perl->easy_init($DEBUG);
 my $log = get_logger(__FILE__);
 my $c_this = 'Tk::DBI::LoginDialog';
-my $action = "Cancel";
 
-# ---- main ----
+# ---- create ----
 my $top = new MainWindow;
 #$top->withdraw;
 
 my $ld = $top->LoginDialog;
 isa_ok($ld, $c_this, "new no parm");
 
-my $b_cancel = $ld->Subwidget("B_$action");
-$b_cancel->after(TIMEOUT, sub{ $b_cancel->invoke; });
-is($ld->Show, $action,	"show $action");
+# ---- cancel ----
+queue_button($ld, "Cancel", "s");
+ok(defined($ld->dbh) == 0,	"null dbh");
 
+# ---- exit ----
+$ld->configure(-exit => sub { warn "IGNORE dummy exit routine\n"; });
+queue_button($ld, "Exit", "s");
+
+# ---- login ----
+$ld->driver("ExampleP");
+queue_button($ld, "Login", "s");
+isa_ok($ld->dbh, "DBI::db",	"non-null dbh");
+
+# ---- loop ----
+queue_button($ld, "Login", "l");
+
+# ---- clean-up ----
 $ld->destroy;
 ok(Tk::Exists($ld) == 0,	"destroy");
 

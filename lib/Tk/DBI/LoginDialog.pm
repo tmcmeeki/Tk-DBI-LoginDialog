@@ -12,10 +12,17 @@ Tk::DBI::LoginDialog - DBI login dialog class for Perl/Tk.
 
   my $d = $top->LoginDialog(-instance => 'XE');
  
-  my $dbh = $d->Show;
+  my $dbh = $d->login;
 
   print $d->error . "\n"
 	unless defined($dbh);
+
+  # ... or ...
+
+  $d->Show;
+
+  print $d->error . "\n"
+	unless defined($d->dbh);
 
 =head1 DESCRIPTION
 
@@ -105,7 +112,9 @@ sub Populate {
 	$specs{-dbname} = [ qw/ METHOD dbname Dbname /, undef ];
 	$specs{-driver} = [ qw/ METHOD driver Driver /, undef ];
 	$specs{-instance} = [ qw/ METHOD instance Instance /, undef ];
+	$specs{-login} = [ qw/ METHOD login Login /, undef ];
 	$specs{-password} = [ qw/ METHOD password Password /, undef ];
+	$specs{-show} = [ qw/ METHOD show Show /, undef ];
 	$specs{-username} = [ qw/ METHOD username Username /, undef ];
 
 =head1 WIDGET-SPECIFIC OPTIONS
@@ -257,6 +266,7 @@ sub _paint {
 		)->grid(-row => 1, -column => 2, -sticky => 'w');
 
 
+	$self->Advertise('dialog', $d);
 	$self->Advertise('driver', $w);
 
 =head1 ADVERTISED WIDGETS
@@ -265,6 +275,10 @@ Component subwidgets can be accessed via the B<Subwidget> method.
 Valid subwidget names are listed below.
 
 =over 4
+
+=item Name:  dialog, Class: DialogBox
+
+Widget reference of the dialog in which credentials are entered.
 
 =item Name:  driver, Class: BrowseEntry
 
@@ -319,8 +333,6 @@ Widget references of the three dialog buttons.
 	for (@buttons) {
 		my $button = "B_" . $_;
 
-		$self->_log->debug("advertising [$button]");
-
 		$self->Advertise($button, $d->Subwidget($button));
 	}
 
@@ -334,15 +346,11 @@ sub cb_login {
 	my $button = shift;
 	my $data = $self->privateData;
 
-	$self->_log->debug("button [$button]");
-
 	if ($button eq 'Exit') {
 
 		$self->Callback('-exit');
 
 	} elsif ($button eq 'Cancel') {
-
-		$self->_log->debug("login sequence cancelled");
 
 	} elsif ($button eq 'Login') {
 		$self->_log->debug("attempting to login to database");
@@ -374,8 +382,6 @@ sub cb_populate {
 	my @drivers = DBI->available_drivers;
 	my $data = $self->privateData;
 
-	$self->_log->debug(sprintf "self [%s]", $self->PathName);
-
 	my $dropdown = $self->Subwidget('driver');
 
 	$dropdown->configure('-choices', [ @drivers ]);
@@ -391,7 +397,7 @@ sub cb_populate {
 
 		last if ($self->$_ eq "");
 	}
-	$self->_log->debug(sprintf "setting focus to [%s]", $w->PathName);
+	#$self->_log->debug(sprintf "setting focus to [%s]", $w->PathName);
 	$w->focus;
 
 	my $pw = $self->Subwidget('password');
@@ -413,6 +419,17 @@ Returns the database handle associated with the current object.
 
 sub dbh {
 	return shift->_default_value('dbh');
+}
+
+
+=item B<driver>
+
+Set or return the B<driver> variable.
+
+=cut
+
+sub driver {
+	return shift->_default_value('driver', shift);
 }
 
 
@@ -486,7 +503,7 @@ Returns a DBI database handle, subject to the DBI B<connect> method.
 
 =item B<Show>
 
-The Show method is an alias of the login method, and takes the same parameters.
+The Show method behaves as per the DialogBox widget.
 
 =cut
 
