@@ -26,7 +26,7 @@ use strict;
 use warnings;
 
 use Log::Log4perl qw/ :easy /;
-use Test::More tests => 23;
+use Test::More tests => 33;
 use Tk;
 use Data::Dumper;
 
@@ -81,5 +81,19 @@ for my $option (qw/ -mask -retry /) {
 	isa_ok($ld1->configure($option => "X"), "ARRAY", "option configure $option");
 	$value = $ld1->cget($option);
 	is($value, "X",	"option verify $option");
+}
+
+for my $widget (qw/ driver instance username password error /) {
+	my $w = $ld1->Subwidget($widget);
+	ok(Exists($w) == 1,	"exists $widget");
+	my $c = $w->Class;
+
+	if ($c eq 'Entry') {
+		is($w->get, "DUMMY",			"get $c $widget");
+	} elsif ($c eq 'ROText') {
+		like($w->Contents, qr/^\s*$/,		"get $c $widget");
+	} elsif ($c eq 'BrowseEntry') {
+		ok(defined($w->get("1.0")) == 0,	"get $c $widget");
+	}
 }
 
