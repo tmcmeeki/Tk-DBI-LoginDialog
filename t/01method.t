@@ -83,17 +83,23 @@ for my $option (qw/ -mask -retry /) {
 	is($value, "X",	"option verify $option");
 }
 
+$ld1->driver("DUMMY");
+
 for my $widget (qw/ driver instance username password error /) {
+
 	my $w = $ld1->Subwidget($widget);
 	ok(Exists($w) == 1,	"exists $widget");
+
 	my $c = $w->Class;
 
 	if ($c eq 'Entry') {
-		is($w->get, "DUMMY",			"get $c $widget");
+		is($w->get, "DUMMY",		"subwidget get $c $widget");
 	} elsif ($c eq 'ROText') {
-		like($w->Contents, qr/^\s*$/,		"get $c $widget");
+		like($w->Contents, qr/^\s*$/,	"subwidget get $c $widget");
 	} elsif ($c eq 'BrowseEntry') {
-		ok(defined($w->get("1.0")) == 0,	"get $c $widget");
+
+		my $sw = $w->Subwidget('entry');
+		is($sw->get, "DUMMY",		"subwidget get $c $widget");
 	}
 }
 

@@ -58,7 +58,7 @@ use Log::Log4perl qw/ get_logger /;
 #    http://docstore.mik.ua/orelly/perl3/tk/ch14_01.htm
 
 use Tk::widgets qw/ DialogBox Label Entry BrowseEntry ROText /;
-use base qw/ Tk::Toplevel /;
+use base qw/ Tk::DialogBox /;
 
 Construct Tk::Widget 'LoginDialog';
 
@@ -84,6 +84,23 @@ sub ClassInit {
 	my ($class,$mw)=@_;
 
 	$class->SUPER::ClassInit($mw);
+}
+
+
+sub CreateArgs {
+	my($class, $mw, $args) = @_;
+	my @buttons = qw/ Cancel Exit Login /;
+
+	$args->{-buttons} = [ @buttons ];
+	$args->{-default_button} = 'Login';
+
+#	printf "DEBUG args [%s]\n", Dumper($args);
+
+	my @result = $class->SUPER::CreateArgs($mw, $args);
+
+#	printf "DEBUG result [%s]\n", Dumper(\@result);
+
+	return @result;
 }
 
 
@@ -115,7 +132,7 @@ sub Populate {
 	$specs{-instance} = [ qw/ METHOD instance Instance /, undef ];
 	$specs{-login} = [ qw/ METHOD login Login /, undef ];
 	$specs{-password} = [ qw/ METHOD password Password /, undef ];
-	$specs{-show} = [ qw/ METHOD show Show /, undef ];
+#	$specs{-show} = [ qw/ METHOD show Show /, undef ];
 	$specs{-username} = [ qw/ METHOD username Username /, undef ];
 
 =head1 WIDGET-SPECIFIC OPTIONS
@@ -157,13 +174,17 @@ Defaults to B<Tk::exit>.
 
 =cut
 
+	$specs{-command} = [ qw/ CALLBACK command Command /, [ \&cb_login, $self ] ];
 	$specs{-exit} = [ qw/ CALLBACK exit Exit /, sub { Tk::exit; } ];
+	$specs{-showcommand} = [ qw/ CALLBACK showcommand Showcommand /, [ \&cb_populate, $self ] ];
 
 	$self->ConfigSpecs(%specs);
 
 	$self->ConfigSpecs('DEFAULT' => [$o]);
 
-	$self->Delegates('DEFAULT' => $o);
+	$self->Delegates(
+		'DEFAULT' => $o,
+	);
 }
 
 
@@ -186,21 +207,30 @@ sub _dump {
 	my $self = shift;
 	my $w = shift;	# widget
 	my $l = shift;	# level
+	my $property;
 
 	$w = $self unless (defined $w);
 	$l = 0 unless (defined $l);
 
-	$self->_log->debug(sprintf "path [%s] level [%d] widget [%s]",
-		$w->PathName,
-		$l++, $w->name,
-	);
-
-	for my $child ($w->children) {
-
-		$self->_dump($child, $l);
+	if ($w->class eq 'Button' || $w->class eq 'Label') {
+		$property = '-text';
 	}
 
-	$self->_log->debug(sprintf 'ConfigSpecs [%s]', Dumper($w->Subwidget))
+	$self->_log->debug(sprintf "level %02d path [%s] name [%s] class [%s] what [%s]",
+		$l++,
+		$w->PathName,
+		$w->name,
+		$w->class,
+		(defined $property) ? $w->cget($property) : "n/a",
+	);
+
+	if ($w->can('Subwidget')) {
+		for my $child (sort $w->Subwidget) {
+			$self->_dump($child, $l);
+		}
+	}
+
+	$self->_log->debug(sprintf 'ConfigSpecs [%s]', join(' ', keys($w->ConfigSpecs)))
 		if ($l == 1);
 }
 
@@ -237,16 +267,10 @@ sub _paint {
 	my $self = shift;
 	my $w;
 	my $data = $self->privateData;
-	my @buttons = qw/ Cancel Exit Login /;
 
-	my $d = $self->DialogBox(-title => S_WHATAMI,
-		-buttons => [ @buttons ],
-		-default_button => 'Login',
-		-command => [ \&cb_login, $self ],
-		-showcommand => [ \&cb_populate, $self ],
-	);
+	my $d = $self->Subwidget('top');
 
-	my $f = $d->add('Frame', -borderwidth => 3, -relief => 'ridge')->pack;
+	my $f = $d->Frame(-borderwidth => 3, -relief => 'ridge')->pack;
 
 	# add some labels on the left side
 
@@ -310,6 +334,8 @@ Widget references for the basic credential entry widgets.
 
 Widget reference of the status/error message widget.
 
+=back
+
 =cut
 	# add the error/status field at the bottom
 
@@ -319,23 +345,7 @@ Widget reference of the status/error message widget.
 
 	$self->Advertise('error', $w);
 
-=item Name:  B_Cancel, Class: Button
-
-=item Name:  B_Exit, Class: Button
-
-=item Name:  B_Login, Class: Button
-
-Widget references of the three dialog buttons.
-
-=back
-
-=cut
-
-	for (@buttons) {
-		my $button = "B_" . $_;
-
-		$self->Advertise($button, $d->Subwidget($button));
-	}
+#	$self->_dump;
 
 	return $d;
 }
@@ -346,6 +356,8 @@ sub cb_login {
 	my $self = shift;
 	my $button = shift;
 	my $data = $self->privateData;
+
+#	$self->_log->debug("DEBUG button [$button]");
 
 	if ($button eq 'Exit') {
 
@@ -372,7 +384,7 @@ sub cb_login {
 			$self->_error($DBI::errstr);
 		}
 	} else {
-		$self->_log->logcroak("ERROR invalid action [$button]");
+		$self->_log->logconfess("ERROR invalid action [$button]");
 	}
 }
 
@@ -398,12 +410,18 @@ sub cb_populate {
 
 		last if ($self->$_ eq "");
 	}
-	#$self->_log->debug(sprintf "setting focus to [%s]", $w->PathName);
-	$w->focus;
+
+	if (Tk::Exists($w)) {	# fields may have been removed by caller (bad)
+		#$self->_log->debug(sprintf "setting focus to [%s]", $w->PathName);
+		$w->focus;
+	}
+
+
+	# set the masking for the password field
 
 	my $pw = $self->Subwidget('password');
-	my $mask = $self->cget('-mask');
-	$pw->configure(-show => $mask);
+	$pw->configure(-show => $self->cget('-mask'))
+		if (Tk::Exists($pw));	# caller might have removed this widget
 }
 
 

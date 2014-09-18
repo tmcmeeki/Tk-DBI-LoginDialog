@@ -7,3 +7,4 @@ README
 README.md
 t/00basic.t
 t/01method.t
+t/02sub.t

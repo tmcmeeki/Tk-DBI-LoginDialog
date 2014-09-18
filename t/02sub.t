@@ -1,8 +1,8 @@
 #!/usr/bin/perl
 # Before `make install' is performed this script should be runnable with
-# `make test'. After `make install' it should work as `perl 00basic.t'
+# `make test'. After `make install' it should work as `perl 02sub.t'
 #
-# 00basic.t - test harness for module Tk::DBI::LoginDialog
+# 02sub.t - test harness for module Tk::DBI::LoginDialog
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published
@@ -26,30 +26,19 @@ use strict;
 use warnings;
 
 use Log::Log4perl qw/ :easy /;
-use Test::More tests => 10;
+use Test::More tests => 9;
+use Tk;
 
 use constant TIMEOUT => 250; # unit: ms
 
-# ---- globals ----
-Log::Log4perl->easy_init($DEBUG);
-my $log = get_logger(__FILE__);
-my $c_this = 'Tk::DBI::LoginDialog';
-
 sub queue_button {
-	my ($o,$action,$method)=@_;
-	my $label = "B_$action";
+	my ($o,$action)=@_;
 
-	my $button = $o->Subwidget($label);
-
-#	$log->debug("about to queue action for [$label]");
+	my $button = $o->Subwidget("B_$action");
 
 	$button->after(TIMEOUT, sub{ $button->invoke; });
 
-	if ($method eq "s") {
-		is($o->Show, $action,		"show $action");
-	} else {
-		isa_ok($o->login(1), "DBI::db",	"$action");
-	}
+	is($o->Show, $action,		"show $action");
 }
 
 
@@ -60,31 +49,38 @@ BEGIN { use_ok('Tk::DBI::LoginDialog') };
 # Insert your test code below, the Test::More module is use()ed here so read
 # its man page ( perldoc Test::More ) for help writing this test script.
 
+# ---- globals ----
+Log::Log4perl->easy_init($DEBUG);
+my $log = get_logger(__FILE__);
+my $c_this = 'Tk::DBI::LoginDialog';
+
 # ---- create ----
 my $top = new MainWindow;
-#$top->withdraw;
+my %field = (instance => "val_0", username => "val_1", password => "val_2");
 
-my $ld = $top->LoginDialog;
-isa_ok($ld, $c_this,		"new");
+my $ld0 = $top->LoginDialog(%field);
+isa_ok($ld0, $c_this, "new with parms");
 
-# ---- cancel ----
-queue_button($ld, "Cancel", "s");
-ok(defined($ld->dbh) == 0,	"null dbh");
+# ---- destroy some subwidgets ----
+queue_button($ld0, "Cancel");
 
-# ---- exit ----
-$ld->configure(-exit => sub { warn "IGNORE dummy exit routine\n"; });
-queue_button($ld, "Exit", "s");
+for (keys %field, "error") {
 
-# ---- login ----
-$ld->driver("ExampleP");
-queue_button($ld, "Login", "s");
-isa_ok($ld->dbh, "DBI::db",	"non-null dbh");
+	my $w = $ld0->Subwidget($_);
 
-# ---- loop ----
-queue_button($ld, "Login", "l");
-like($ld->error, qr/onnected/,        "error");
+	$w->destroy;
 
-# ---- clean-up ----
-$ld->destroy;
-ok(Tk::Exists($ld) == 0,	"destroy");
+	ok(Tk::Exists($w) == 0,	"destroy subwidget $_");
+
+	$ld0->update;
+}
+
+my $ld1 = $top->LoginDialog;
+isa_ok($ld1, $c_this, "new no parms");
+
+
+$ld1->configure(-title => "HELLO WORLD");
+
+$ld1->update;
+queue_button($ld1, "Cancel");
 
