@@ -36,11 +36,15 @@ details where necessary.
 
 The dialog presents three buttons as follows:
 
-  Cancel: hides the dialog without further processing or interaction.
+=over 4
 
-  Exit: calls the defined exit routine.  See L<CALLBACKS>.
+=item B<Cancel>: hides the dialog without further processing or interaction.
 
-  Login: attempt to login via DBI with the credentials supplied.
+=item B<Exit>: calls the defined exit routine.  See L<CALLBACKS>.
+
+=item B<Login>: attempt to login via DBI with the credentials supplied.
+
+=back
 
 =cut
 
@@ -73,7 +77,7 @@ use constant RE_DRIVER_INSTANCE => "(Oracle|DB2)";
 
 
 # --- package globals ---
-our $VERSION = '1.001';
+our $VERSION = '1.002';
 
 
 # --- package locals ---
@@ -122,9 +126,9 @@ sub Populate {
 	    re_driver => RE_DRIVER_INSTANCE,
 	);
 
-	my $o = $self->_paint;
+	$self->_paint;
 
-	$self->Advertise('LoginDialog' => $o);
+	$self->Advertise('LoginDialog' => $self);
 
 	$specs{-dbh} = [ qw/ METHOD dbh Dbh /, undef ];
 	$specs{-dbname} = [ qw/ METHOD dbname Dbname /, undef ];
@@ -165,10 +169,19 @@ C<LoginDialog> provides the following callbacks:
 
 =over 4
 
+=item B<-command>
+
+Per the DialogBox widget, this maps the B<Login> button to the
+L<DBI> login routine.
+
 =item B<-exit>
 
 The sub-routine to call when the B<Exit> button is pressed.
 Defaults to B<Tk::exit>.
+
+=item B<-showcommand>
+
+This callback refreshes items in the dialog as part of the B<Show> method.
 
 =back
 
@@ -176,14 +189,15 @@ Defaults to B<Tk::exit>.
 
 	$specs{-command} = [ qw/ CALLBACK command Command /, [ \&cb_login, $self ] ];
 	$specs{-exit} = [ qw/ CALLBACK exit Exit /, sub { Tk::exit; } ];
+
 	$specs{-showcommand} = [ qw/ CALLBACK showcommand Showcommand /, [ \&cb_populate, $self ] ];
 
 	$self->ConfigSpecs(%specs);
 
-	$self->ConfigSpecs('DEFAULT' => [$o]);
+	$self->ConfigSpecs('DEFAULT' => [$self]);
 
 	$self->Delegates(
-		'DEFAULT' => $o,
+		'DEFAULT' => $self,
 	);
 }
 
@@ -268,9 +282,9 @@ sub _paint {
 	my $w;
 	my $data = $self->privateData;
 
-	my $d = $self->Subwidget('top');
+	my $t = $self->Subwidget('top');
 
-	my $f = $d->Frame(-borderwidth => 3, -relief => 'ridge')->pack;
+	my $f = $t->Frame(-borderwidth => 3, -relief => 'ridge')->pack;
 
 	# add some labels on the left side
 
@@ -290,8 +304,6 @@ sub _paint {
 		-variable => \$data->{'driver'},
 		)->grid(-row => 1, -column => 2, -sticky => 'w');
 
-
-	$self->Advertise('dialog', $d);
 	$self->Advertise('driver', $w);
 
 =head1 ADVERTISED WIDGETS
@@ -300,10 +312,6 @@ Component subwidgets can be accessed via the B<Subwidget> method.
 Valid subwidget names are listed below.
 
 =over 4
-
-=item Name:  dialog, Class: DialogBox
-
-Widget reference of the dialog in which credentials are entered.
 
 =item Name:  driver, Class: BrowseEntry
 
@@ -346,8 +354,6 @@ Widget reference of the status/error message widget.
 	$self->Advertise('error', $w);
 
 #	$self->_dump;
-
-	return $d;
 }
 
 
@@ -583,7 +589,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 =head1 SEE ALSO
 
-L<perl>, L<DBI>, L<Tk>.
+L<perl>, L<DBI>, L<Tk>, L<Tk::DialogBox>.
 
 =cut
 

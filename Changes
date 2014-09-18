@@ -1,6 +1,11 @@
 Revision history for Perl extension Tk::DBI::LoginDialog.
 
-0.01  Sun May  5 09:27:29 2013
+1.002  Fri, Sep 19, 2014  5:42:48 AM
+	- corrected "o" versus "self" in Populate
+	- additional unit tests, particularly of SUPER/Subwidget properties
+	- added some minimal perl/module version dependencies
+
+1.001  Sun May  5 09:27:29 2013
 	- original version; created by h2xs 1.23 with options
 		-AX --skip-exporter --use-new-tests -n Tk::DBI::LoginDialog
 

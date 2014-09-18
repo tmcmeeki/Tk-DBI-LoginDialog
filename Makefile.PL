@@ -1,4 +1,4 @@
-use 5.014002;
+use 5.007;
 use ExtUtils::MakeMaker;
 # See lib/ExtUtils/MakeMaker.pm for details of how to influence
 # the contents of the Makefile that is written.
@@ -12,9 +12,9 @@ WriteMakefile(
     PREREQ_PM         => {
         'Carp' => '0',
         'Data::Dumper' => '0',
-        'DBI' => '0',
+        'DBI' => '1.58',
         'Log::Log4perl' => '0',
-        'Tk' => '0',
+        'Tk' => '804.030',
         'Tk::DialogBox' => '0',
         'Tk::BrowseEntry' => '0',
         'Tk::Label' => '0',

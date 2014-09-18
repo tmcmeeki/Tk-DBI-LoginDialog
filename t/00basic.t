@@ -28,7 +28,7 @@ use warnings;
 use Log::Log4perl qw/ :easy /;
 use Test::More tests => 10;
 
-use constant TIMEOUT => 250; # unit: ms
+use constant TIMEOUT => (exists $ENV{TIMEOUT}) ? $ENV{TIMEOUT} : 250; # unit: ms
 
 # ---- globals ----
 Log::Log4perl->easy_init($DEBUG);
