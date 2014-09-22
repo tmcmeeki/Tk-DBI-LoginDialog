@@ -1,4 +1,5 @@
 #!/usr/bin/perl
+#########################
 # Before `make install' is performed this script should be runnable with
 # `make test'. After `make install' it should work as `perl 02sub.t'
 #
@@ -19,16 +20,20 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #
 #########################
-
-# change 'tests => 1' to 'tests => last_test_to_print';
-
 use strict;
 use warnings;
 
 use Data::Dumper;
 use Log::Log4perl qw/ :easy /;
-use Test::More tests => 195;
 use Tk;
+use Test::More;
+
+my $top; eval { $top = new MainWindow; };
+
+if (Tk::Exists($top)) { plan tests => 195;
+} else { plan skip_all => 'No X server available'; }
+
+require_ok('Tk::DBI::LoginDialog');
 
 use constant TIMEOUT => (exists $ENV{TIMEOUT}) ? $ENV{TIMEOUT} : 250; # unit: ms
 
@@ -49,22 +54,13 @@ sub queue_button {
 }
 
 
-BEGIN { use_ok('Tk::DBI::LoginDialog') };
-
-#########################
-
-# Insert your test code below, the Test::More module is use()ed here so read
-# its man page ( perldoc Test::More ) for help writing this test script.
-
 # ---- globals ----
 Log::Log4perl->easy_init($DEBUG);
 my $log = get_logger(__FILE__);
 my $c_this = 'Tk::DBI::LoginDialog';
 
 # ---- create ----
-my $top = new MainWindow;
 my %field = (instance => "val_0", username => "val_1", password => "val_2");
-
 my $ld0 = $top->LoginDialog(%field);
 isa_ok($ld0, $c_this, "new with parms");
 

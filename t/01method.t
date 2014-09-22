@@ -1,4 +1,5 @@
 #!/usr/bin/perl
+#########################
 # Before `make install' is performed this script should be runnable with
 # `make test'. After `make install' it should work as `perl 01method.t'
 #
@@ -19,34 +20,29 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #
 #########################
-
-# change 'tests => 1' to 'tests => last_test_to_print';
-
 use strict;
 use warnings;
 
 use Log::Log4perl qw/ :easy /;
-use Test::More tests => 33;
 use Tk;
 use Data::Dumper;
+use Test::More;
 
+my $top; eval { $top = new MainWindow; };
 
-BEGIN { use_ok('Tk::DBI::LoginDialog') };
+if (Tk::Exists($top)) { plan tests => 33;
+} else { plan skip_all => 'No X server available'; }
 
-#########################
+require_ok('Tk::DBI::LoginDialog');
 
-# Insert your test code below, the Test::More module is use()ed here so read
-# its man page ( perldoc Test::More ) for help writing this test script.
 
 # ---- globals ----
 Log::Log4perl->easy_init($DEBUG);
 my $log = get_logger(__FILE__);
+my $c_this = 'Tk::DBI::LoginDialog';
 
 
 # ---- main ----
-my $c_this = 'Tk::DBI::LoginDialog';
-
-my $top = new MainWindow;
 my $ld0 = $top->LoginDialog;
 
 isa_ok( $ld0, $c_this, "new no parm");

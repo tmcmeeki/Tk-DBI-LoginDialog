@@ -48,7 +48,7 @@ The dialog presents three buttons as follows:
 
 =cut
 
-use 5.014002;
+use 5.010001;
 
 use strict;
 use warnings;

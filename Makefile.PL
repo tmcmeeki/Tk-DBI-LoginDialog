@@ -1,4 +1,4 @@
-use 5.007;
+use 5.006004;
 use ExtUtils::MakeMaker;
 # See lib/ExtUtils/MakeMaker.pm for details of how to influence
 # the contents of the Makefile that is written.
@@ -8,13 +8,14 @@ my $preop = 'find $(DISTVNAME) -type f -exec egrep -q ___EUMM_VERSION___ {} \; -
 
 WriteMakefile(
     NAME              => 'Tk::DBI::LoginDialog',
+    MIN_PERL_VERSION => '5.010001',
     VERSION_FROM      => 'lib/Tk/DBI/LoginDialog.pm', # finds $VERSION
     PREREQ_PM         => {
         'Carp' => '0',
         'Data::Dumper' => '0',
         'DBI' => '1.58',
         'Log::Log4perl' => '0',
-        'Tk' => '804.030',
+        'Tk' => '800.024',
         'Tk::DialogBox' => '0',
         'Tk::BrowseEntry' => '0',
         'Tk::Label' => '0',
