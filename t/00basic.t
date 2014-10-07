@@ -33,14 +33,14 @@ my $top; eval { $top = new MainWindow; };
 if (Tk::Exists($top)) { plan tests => 10;
 } else { plan skip_all => 'No X server available'; }
 
-require_ok('Tk::DBI::LoginDialog');
+my $c_this = 'Tk::DBI::LoginDialog';
+require_ok($c_this);
 
 use constant TIMEOUT => (exists $ENV{TIMEOUT}) ? $ENV{TIMEOUT} : 250; # unit: ms
 
 # ---- globals ----
 Log::Log4perl->easy_init($DEBUG);
 my $log = get_logger(__FILE__);
-my $c_this = 'Tk::DBI::LoginDialog';
 
 sub queue_button {
 	my ($o,$action,$method)=@_;

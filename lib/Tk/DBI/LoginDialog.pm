@@ -10,7 +10,7 @@ Tk::DBI::LoginDialog - DBI login dialog class for Perl/Tk.
 
   my $top = new MainWindow;
 
-  my $d = $top->LoginDialog(-instance => 'XE');
+  my $d = $top->LoginDialog(-dsn => 'XE');
  
   my $dbh = $d->login;
 
@@ -71,9 +71,9 @@ Construct Tk::Widget 'LoginDialog';
 
 use constant CHAR_MASK => '*';	# masking character
 use constant N_RETRY => 3;	# number of loops to attempt login
-use constant S_NULL => "(null)";
+use constant S_NULL => "";
 use constant S_WHATAMI => "Tk::DBI::LoginDialog";
-use constant RE_DRIVER_INSTANCE => "(Oracle|DB2)";
+use constant S_DSN_DEFAULT => "DSN";
 
 
 # --- package globals ---
@@ -81,6 +81,7 @@ our $VERSION = '1.002';
 
 
 # --- package locals ---
+my %_c_dsn_types = ('DB2' => 'Database', 'Oracle' => 'Instance');
 
 
 # --- Tk standard routines ---
@@ -117,13 +118,14 @@ sub Populate {
 	my $attribute = $self->privateData;
 	%$attribute = (
 	    logger => get_logger(S_WHATAMI),
-	    driver => "",
+	    driver => S_NULL,
+	    drivers => [ sort(DBI->available_drivers) ],
 	    dbh => undef,
-	    dbname => "",
-	    instance => "",
-	    username => "",
-	    password => "",
-	    re_driver => RE_DRIVER_INSTANCE,
+	    dsn => S_NULL,
+	    dsn_label => S_NULL,
+	    username => S_NULL,
+	    password => S_NULL,
+	    re_driver => '(' . join('|', sort(keys %_c_dsn_types)) . ')',
 	);
 
 	$self->_paint;
@@ -131,9 +133,8 @@ sub Populate {
 	$self->Advertise('LoginDialog' => $self);
 
 	$specs{-dbh} = [ qw/ METHOD dbh Dbh /, undef ];
-	$specs{-dbname} = [ qw/ METHOD dbname Dbname /, undef ];
 	$specs{-driver} = [ qw/ METHOD driver Driver /, undef ];
-	$specs{-instance} = [ qw/ METHOD instance Instance /, undef ];
+	$specs{-dsn} = [ qw/ METHOD dsn dsn /, undef ];
 	$specs{-login} = [ qw/ METHOD login Login /, undef ];
 	$specs{-password} = [ qw/ METHOD password Password /, undef ];
 #	$specs{-show} = [ qw/ METHOD show Show /, undef ];
@@ -290,10 +291,13 @@ sub _paint {
 
 	$f->Label(-text => 'Driver', 
 		)->grid(-row => 1, -column => 1, -sticky => 'e');
-	$f->Label(-text => 'Instance', 
+
+	$f->Label(-textvariable => \$data->{'dsn_label'},
 		)->grid(-row => 2, -column => 1, -sticky => 'e');
+
 	$f->Label(-text => 'Username', 
 		)->grid(-row => 3, -column => 1, -sticky => 'e');
+
 	$f->Label(-text => 'Password', 
 		)->grid(-row => 4, -column => 1, -sticky => 'e');
 
@@ -301,7 +305,8 @@ sub _paint {
 	# add the driver drop-down
 
 	$w = (); $w = $f->BrowseEntry(-state => 'readonly',
-		-variable => \$data->{'driver'},
+			-variable => \$data->{'driver'},
+			-choices => $data->{'drivers'},
 		)->grid(-row => 1, -column => 2, -sticky => 'w');
 
 	$self->Advertise('driver', $w);
@@ -317,7 +322,7 @@ Valid subwidget names are listed below.
 
 Widget reference of B<driver> drop-down widget.
 
-=item Name:  instance, Class: Entry
+=item Name:  dsn, Class: Entry
 
 =item Name:  username, Class: Entry
 
@@ -329,7 +334,7 @@ Widget references for the basic credential entry widgets.
 
 	# add some entry fields on the right side 
 
-	my @entry = qw/ instance username password /;
+	my @entry = qw/ dsn username password /;
 	for (my $e = 0; $e < @entry; $e++) {
 
 		$w = (); $w = $f->Entry(-textvariable => \$data->{$entry[$e]},
@@ -375,7 +380,7 @@ sub cb_login {
 		$self->_log->debug("attempting to login to database");
 
 		my $data_source = join(':', "DBI", $data->{'driver'}, 
-			defined($data->{'instance'}) ? $data->{'instance'} : ""
+			defined($data->{'dsn'}) ? $data->{'dsn'} : S_NULL
 			);
 
 		$self->_log->debug("data_source [$data_source]");
@@ -398,23 +403,15 @@ sub cb_login {
 sub cb_populate {
 	my $self = shift;
 	my $button = shift;
-	my @drivers = DBI->available_drivers;
 	my $data = $self->privateData;
 
-	my $dropdown = $self->Subwidget('driver');
+	$self->driver;	# default a driver
 
-	$dropdown->configure('-choices', [ @drivers ]);
-
-	for (@drivers) {
-		$data->{'driver'} = $_
-			if ($_ =~ /$data->{'re_driver'}/);
-	}
-
-	my $w; for (qw/ instance username password /) {
+	my $w; for (qw/ dsn username password /) {
 
 		$w = $self->Subwidget($_);
 
-		last if ($self->$_ eq "");
+		last if ($data->{$_} eq S_NULL);
 	}
 
 	if (Tk::Exists($w)) {	# fields may have been removed by caller (bad)
@@ -454,19 +451,35 @@ Set or return the B<driver> variable.
 =cut
 
 sub driver {
-	return shift->_default_value('driver', shift);
-}
+	my $self = shift;
+	my $driver = shift;
+	my $data = $self->privateData;
+	my %driver = map { $_ => 1 } $data->{'drivers'};
+	my $first = $self->privateData->{'drivers'}->[0];
 
+	$self->_log->logconfess("ERROR no DBI drivers loaded")
+		unless (defined $first);
 
-=item B<dbname>
+#	$self->_log->debug(sprintf "DEBUG re_driver [%s] driver [%s] drivers [%s] first [$first]",
+#			$self->privateData->{'re_driver'},
+#			$self->privateData->{'driver'},
+#			Dumper($self->privateData->{'drivers'}),
+#		);
 
-Set or return the B<database name> variable.
-May not be applicable for all driver types.
+	if (defined $driver) {
 
-=cut
+		if (exists $driver{$driver}) {
+			$data->{'dsn_label'} = $_c_dsn_types{$driver};
+		} else {
+			$driver = $first;
+			$data->{'dsn_label'} = S_DSN_DEFAULT;
+		}
+	} elsif ($data->{'dsn_label'} eq S_NULL) {
+		$driver = $first;
+		$data->{'dsn_label'} = S_DSN_DEFAULT;
+	}
 
-sub dbname {
-	return shift->_default_value('dbname', shift);
+	return $self->_default_value('driver', $driver);
 }
 
 
@@ -495,15 +508,15 @@ sub password {
 }
 
 
-=item B<instance>
+=item B<dsn>
 
-Set or return the B<instance> variable.
+Set or return the B<dsn> variable.
 May not be applicable for all driver types.
 
 =cut
 
-sub instance {
-	return shift->_default_value('instance', shift);
+sub dsn {
+	return shift->_default_value('dsn', shift);
 }
 
 

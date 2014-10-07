@@ -30,16 +30,16 @@ use Test::More;
 
 my $top; eval { $top = new MainWindow; };
 
-if (Tk::Exists($top)) { plan tests => 33;
+if (Tk::Exists($top)) { plan tests => 31;
 } else { plan skip_all => 'No X server available'; }
 
-require_ok('Tk::DBI::LoginDialog');
+my $c_this = 'Tk::DBI::LoginDialog';
+require_ok($c_this);
 
 
 # ---- globals ----
 Log::Log4perl->easy_init($DEBUG);
 my $log = get_logger(__FILE__);
-my $c_this = 'Tk::DBI::LoginDialog';
 
 
 # ---- main ----
@@ -59,7 +59,10 @@ isnt(Tk::Exists($ld0), 1, "destroyed $c_this");
 my $ld1 = $top->LoginDialog;
 isa_ok( $ld1, $c_this, "new no parm");
 
-for my $method (qw/ driver dbname password instance username /) {
+isnt($ld1->driver, "",			"driver non-null");
+isnt($ld1->driver("DUMMY", "DUMMY"),	"driver override invalid");
+
+for my $method (qw/ password dsn username /) {
 
 	my $condition = "method get $method";
 	my $value = $ld1->$method;
@@ -79,9 +82,8 @@ for my $option (qw/ -mask -retry /) {
 	is($value, "X",	"option verify $option");
 }
 
-$ld1->driver("DUMMY");
 
-for my $widget (qw/ driver instance username password error /) {
+for my $widget (qw/ driver dsn username password error /) {
 
 	my $w = $ld1->Subwidget($widget);
 	ok(Exists($w) == 1,	"exists $widget");
@@ -95,7 +97,7 @@ for my $widget (qw/ driver instance username password error /) {
 	} elsif ($c eq 'BrowseEntry') {
 
 		my $sw = $w->Subwidget('entry');
-		is($sw->get, "DUMMY",		"subwidget get $c $widget");
+		isnt($sw->get, "DUMMY",		"subwidget get $c $widget");
 	}
 }
 

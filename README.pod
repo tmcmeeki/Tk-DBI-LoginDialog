@@ -1,0 +1,234 @@
+=head1 NAME
+
+Tk::DBI::LoginDialog - DBI login dialog class for Perl/Tk.
+
+=head1 SYNOPSIS
+
+  use Tk::DBI::LoginDialog;
+
+  my $top = new MainWindow;
+
+  my $d = $top->LoginDialog(-instance => 'XE');
+ 
+  my $dbh = $d->login;
+
+  print $d->error . "\n"
+	unless defined($dbh);
+
+  # ... or ...
+
+  $d->Show;
+
+  print $d->error . "\n"
+	unless defined($d->dbh);
+
+=head1 DESCRIPTION
+
+"Tk::DBI::LoginDialog" is a dialog widget which interacts with the DBI
+interface specifically to attempt a connection to a database, and thus
+returning a database handle.
+
+This widget allows the user to enter username and password details
+into the dialog, and also to select driver, and other driver-specific
+details where necessary.
+
+The dialog presents three buttons as follows:
+
+=over 4
+
+=item B<Cancel>: hides the dialog without further processing or interaction.
+
+=item B<Exit>: calls the defined exit routine.  See L<CALLBACKS>.
+
+=item B<Login>: attempt to login via DBI with the credentials supplied.
+
+=back
+
+
+=cut
+
+=head1 WIDGET-SPECIFIC OPTIONS
+
+C<LoginDialog> provides the following specific options:
+
+=over 4
+
+=item B<-mask>
+
+The character or string used to hide (mask) the password.
+
+
+=cut
+
+=item B<-retry>
+
+The number of times that attempts will be made to login to the database
+before giving up.  A default applies.
+
+=back
+
+
+=cut
+
+=head1 CALLBACKS
+
+C<LoginDialog> provides the following callbacks:
+
+=over 4
+
+=item B<-command>
+
+Per the DialogBox widget, this maps the B<Login> button to the
+L<DBI> login routine.
+
+=item B<-exit>
+
+The sub-routine to call when the B<Exit> button is pressed.
+Defaults to B<Tk::exit>.
+
+=item B<-showcommand>
+
+This callback refreshes items in the dialog as part of the B<Show> method.
+
+=back
+
+
+=cut
+
+=head1 ADVERTISED WIDGETS
+
+Component subwidgets can be accessed via the B<Subwidget> method.
+Valid subwidget names are listed below.
+
+=over 4
+
+=item Name:  driver, Class: BrowseEntry
+
+Widget reference of B<driver> drop-down widget.
+
+=item Name:  instance, Class: Entry
+
+=item Name:  username, Class: Entry
+
+=item Name:  password, Class: Entry
+
+Widget references for the basic credential entry widgets.
+
+
+=cut
+
+=item Name:  error, Class: ROText
+
+Widget reference of the status/error message widget.
+
+=back
+
+
+=cut
+
+=head1 METHODS
+
+=over 4
+
+=item B<dbh>
+
+Returns the database handle associated with the current object.
+
+
+=cut
+
+=item B<driver>
+
+Set or return the B<driver> variable.
+
+
+=cut
+
+=item B<dbname>
+
+Set or return the B<database name> variable.
+May not be applicable for all driver types.
+
+
+=cut
+
+=item B<error>
+
+Return the latest error message from the DBI framework following an
+attempt to connect via the specified driver.  If last connection
+attempt was successful, this will return "Connected okay."
+
+
+=cut
+
+=item B<password>
+
+Set or return the B<password> variable.
+May not be applicable for all driver types.
+
+
+=cut
+
+=item B<instance>
+
+Set or return the B<instance> variable.
+May not be applicable for all driver types.
+
+
+=cut
+
+=item B<username>
+
+Set or return the B<username> variable.
+May not be applicable for all driver types.
+
+
+=cut
+
+=item B<login>([RETRY])
+
+A convenience function to show the login dialog and attempt connection.
+The number of attempts is prescribed by the B<RETRY> parameter, which is
+optional.
+Returns a DBI database handle, subject to the DBI B<connect> method.
+
+=item B<Show>
+
+The Show method behaves as per the DialogBox widget.
+
+
+=cut
+
+=back
+
+=head1 VERSION
+
+Build V1.002
+
+=head1 AUTHOR
+
+Copyright (C) 2014  B<Tom McMeekin> E<lt>tmcmeeki@cpan.orgE<gt>
+
+=head1 LICENSE
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published
+by the Free Software Foundation; either version 2 of the License,
+or any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+
+=head1 SEE ALSO
+
+L<perl>, L<DBI>, L<Tk>, L<Tk::DialogBox>.
+
+
+=cut
+

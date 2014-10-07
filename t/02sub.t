@@ -33,7 +33,8 @@ my $top; eval { $top = new MainWindow; };
 if (Tk::Exists($top)) { plan tests => 195;
 } else { plan skip_all => 'No X server available'; }
 
-require_ok('Tk::DBI::LoginDialog');
+my $c_this = 'Tk::DBI::LoginDialog';
+require_ok($c_this);
 
 use constant TIMEOUT => (exists $ENV{TIMEOUT}) ? $ENV{TIMEOUT} : 250; # unit: ms
 
@@ -57,10 +58,9 @@ sub queue_button {
 # ---- globals ----
 Log::Log4perl->easy_init($DEBUG);
 my $log = get_logger(__FILE__);
-my $c_this = 'Tk::DBI::LoginDialog';
 
 # ---- create ----
-my %field = (instance => "val_0", username => "val_1", password => "val_2");
+my %field = (dsn => "val_0", username => "val_1", password => "val_2");
 my $ld0 = $top->LoginDialog(%field);
 isa_ok($ld0, $c_this, "new with parms");
 
@@ -145,7 +145,7 @@ my %substitute = (
 	'^[bB]lack$' => 'white',
 	'^\d$' => '4',
 	'^\d\d$' => '40',
-	'^#d9d9d9$' => 'red',
+	'^\#d9d9d9$' => 'red',
 	'^[wW]hite$' => 'blue',
 	'^raised$' => 'sunken',
 	'^sunken$' => 'ridge',
