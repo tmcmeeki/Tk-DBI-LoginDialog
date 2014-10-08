@@ -69,11 +69,12 @@ Construct Tk::Widget 'LoginDialog';
 
 # package constants
 
+use constant AS_DRIVERS => sort(DBI->available_drivers);
 use constant CHAR_MASK => '*';	# masking character
 use constant N_RETRY => 3;	# number of loops to attempt login
 use constant S_NULL => "";
 use constant S_WHATAMI => "Tk::DBI::LoginDialog";
-use constant S_DSN_DEFAULT => "DSN";
+use constant S_DSN => "DSN";
 
 
 # --- package globals ---
@@ -81,7 +82,6 @@ our $VERSION = '1.002';
 
 
 # --- package locals ---
-my %_c_dsn_types = ('DB2' => 'Database', 'Oracle' => 'Instance');
 
 
 # --- Tk standard routines ---
@@ -112,6 +112,7 @@ sub CreateArgs {
 sub Populate {
 	my ($self,$args)=@_;
 	my %specs;
+	my %dsn_types = ('DB2' => 'Database', 'Oracle' => 'Instance');
 
 	$self->SUPER::Populate($args);
 
@@ -119,13 +120,14 @@ sub Populate {
 	%$attribute = (
 	    logger => get_logger(S_WHATAMI),
 	    driver => S_NULL,
-	    drivers => [ sort(DBI->available_drivers) ],
+	    drivers => [ AS_DRIVERS ],
 	    dbh => undef,
 	    dsn => S_NULL,
 	    dsn_label => S_NULL,
 	    username => S_NULL,
 	    password => S_NULL,
-	    re_driver => '(' . join('|', sort(keys %_c_dsn_types)) . ')',
+	    re_driver => '(' . join('|', sort(keys %dsn_types)) . ')',
+	    dsn_types => { %dsn_types },
 	);
 
 	$self->_paint;
@@ -134,10 +136,10 @@ sub Populate {
 
 	$specs{-dbh} = [ qw/ METHOD dbh Dbh /, undef ];
 	$specs{-driver} = [ qw/ METHOD driver Driver /, undef ];
+	$specs{-drivers} = [ qw/ METHOD drivers Drivers /, undef ];
 	$specs{-dsn} = [ qw/ METHOD dsn dsn /, undef ];
 	$specs{-login} = [ qw/ METHOD login Login /, undef ];
 	$specs{-password} = [ qw/ METHOD password Password /, undef ];
-#	$specs{-show} = [ qw/ METHOD show Show /, undef ];
 	$specs{-username} = [ qw/ METHOD username Username /, undef ];
 
 =head1 WIDGET-SPECIFIC OPTIONS
@@ -419,7 +421,6 @@ sub cb_populate {
 		$w->focus;
 	}
 
-
 	# set the masking for the password field
 
 	my $pw = $self->Subwidget('password');
@@ -446,7 +447,9 @@ sub dbh {
 
 =item B<driver>
 
-Set or return the B<driver> variable.
+Set or return the B<driver> variable.  For specific drivers, the label
+associated with the B<dsn> may also change to better match the nomenclature
+of the database.
 
 =cut
 
@@ -454,32 +457,69 @@ sub driver {
 	my $self = shift;
 	my $driver = shift;
 	my $data = $self->privateData;
-	my %driver = map { $_ => 1 } $data->{'drivers'};
-	my $first = $self->privateData->{'drivers'}->[0];
+
+	my %available = map { $_ => 1 } @{ $data->{'drivers'} };
+	my $first = $data->{'drivers'}->[0];
 
 	$self->_log->logconfess("ERROR no DBI drivers loaded")
 		unless (defined $first);
 
-#	$self->_log->debug(sprintf "DEBUG re_driver [%s] driver [%s] drivers [%s] first [$first]",
-#			$self->privateData->{'re_driver'},
-#			$self->privateData->{'driver'},
-#			Dumper($self->privateData->{'drivers'}),
-#		);
+	$self->_log->debug(sprintf "DEBUG first [%s] available [%s]", $first, Dumper(\%available));
+
+	$self->_log->debug(sprintf "DEBUG re_driver [%s] driver [%s]", $self->privateData->{'re_driver'}, $self->privateData->{'driver'});
+
+#	$self->_log->debug(sprintf "DEBUG data [%s]", Dumper($self->privateData));
 
 	if (defined $driver) {
 
-		if (exists $driver{$driver}) {
-			$data->{'dsn_label'} = $_c_dsn_types{$driver};
+		if (exists($available{$driver})) {
+
+			if (exists($data->{'dsn_types'}->{$driver})) {
+
+				$data->{'dsn_label'} = $data->{'dsn_types'}->{$driver};
+			} else {
+				$data->{'dsn_label'} = S_DSN;
+			}
 		} else {
+
 			$driver = $first;
-			$data->{'dsn_label'} = S_DSN_DEFAULT;
+			$data->{'dsn_label'} = S_DSN;
+
+			$self->logwarn("invalid driver specified, choosing first available [$driver]");
 		}
+
 	} elsif ($data->{'dsn_label'} eq S_NULL) {
 		$driver = $first;
-		$data->{'dsn_label'} = S_DSN_DEFAULT;
+		$data->{'dsn_label'} = S_DSN;
 	}
 
 	return $self->_default_value('driver', $driver);
+}
+
+
+=item B<-drivers>
+
+This list of available drivers, which defaults to those drivers defined by DBI.
+
+=cut
+
+sub drivers {
+	my $self = shift;
+	my $drivers = shift;
+
+	my $data = $self->privateData;
+	my $w = $self->Subwidget('driver');
+
+	if (defined $drivers) {
+
+		$self->_log->logconfess(sprintf "ERROR not an array ref [%s]", Dumper($drivers))
+			unless (ref($drivers) eq 'ARRAY');
+
+		$w->configure('-choices', $drivers);
+		$self->driver;		# re-establish a default
+	}
+
+	return $self->_default_value('drivers', $drivers);
 }
 
 
@@ -511,7 +551,6 @@ sub password {
 =item B<dsn>
 
 Set or return the B<dsn> variable.
-May not be applicable for all driver types.
 
 =cut
 
