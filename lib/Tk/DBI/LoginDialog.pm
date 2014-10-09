@@ -72,9 +72,9 @@ Construct Tk::Widget 'LoginDialog';
 use constant AS_DRIVERS => sort(DBI->available_drivers);
 use constant CHAR_MASK => '*';	# masking character
 use constant N_RETRY => 3;	# number of loops to attempt login
+use constant S_DSN => "DSN";
 use constant S_NULL => "";
 use constant S_WHATAMI => "Tk::DBI::LoginDialog";
-use constant S_DSN => "DSN";
 
 
 # --- package globals ---
@@ -119,15 +119,15 @@ sub Populate {
 	my $attribute = $self->privateData;
 	%$attribute = (
 	    logger => get_logger(S_WHATAMI),
+	    dbh => undef,
 	    driver => S_NULL,
 	    drivers => [ AS_DRIVERS ],
-	    dbh => undef,
 	    dsn => S_NULL,
 	    dsn_label => S_NULL,
-	    username => S_NULL,
+	    dsn_types => { %dsn_types },
 	    password => S_NULL,
 	    re_driver => '(' . join('|', sort(keys %dsn_types)) . ')',
-	    dsn_types => { %dsn_types },
+	    username => S_NULL,
 	);
 
 	$self->_paint;
@@ -177,10 +177,18 @@ C<LoginDialog> provides the following callbacks:
 Per the DialogBox widget, this maps the B<Login> button to the
 L<DBI> login routine.
 
+=cut
+
+	$specs{-command} = [ qw/ CALLBACK command Command /, [ \&cb_login, $self ] ];
+
 =item B<-exit>
 
 The sub-routine to call when the B<Exit> button is pressed.
 Defaults to B<Tk::exit>.
+
+=cut
+
+	$specs{-exit} = [ qw/ CALLBACK exit Exit /, sub { Tk::exit; } ];
 
 =item B<-showcommand>
 
@@ -189,9 +197,6 @@ This callback refreshes items in the dialog as part of the B<Show> method.
 =back
 
 =cut
-
-	$specs{-command} = [ qw/ CALLBACK command Command /, [ \&cb_login, $self ] ];
-	$specs{-exit} = [ qw/ CALLBACK exit Exit /, sub { Tk::exit; } ];
 
 	$specs{-showcommand} = [ qw/ CALLBACK showcommand Showcommand /, [ \&cb_populate, $self ] ];
 
@@ -307,8 +312,8 @@ sub _paint {
 	# add the driver drop-down
 
 	$w = (); $w = $f->BrowseEntry(-state => 'readonly',
-			-variable => \$data->{'driver'},
-			-choices => $data->{'drivers'},
+			-textvariable => \$data->{'driver'},
+			-choices => [ $data->{'drivers'} ],
 		)->grid(-row => 1, -column => 2, -sticky => 'w');
 
 	$self->Advertise('driver', $w);
@@ -445,11 +450,11 @@ sub dbh {
 }
 
 
-=item B<driver>
+=item B<driver> [EXPR]
 
-Set or return the B<driver> variable.  For specific drivers, the label
+Set or return the B<driver> property.  For specific drivers, the label
 associated with the B<dsn> may also change to better match the nomenclature
-of the database.
+of the specified database management system.
 
 =cut
 
@@ -464,9 +469,9 @@ sub driver {
 	$self->_log->logconfess("ERROR no DBI drivers loaded")
 		unless (defined $first);
 
-	$self->_log->debug(sprintf "DEBUG first [%s] available [%s]", $first, Dumper(\%available));
+#	$self->_log->debug(sprintf "DEBUG first [%s] available [%s]", $first, Dumper(\%available));
 
-	$self->_log->debug(sprintf "DEBUG re_driver [%s] driver [%s]", $self->privateData->{'re_driver'}, $self->privateData->{'driver'});
+#	$self->_log->debug(sprintf "DEBUG re_driver [%s] driver [%s]", $self->privateData->{'re_driver'}, $self->privateData->{'driver'});
 
 #	$self->_log->debug(sprintf "DEBUG data [%s]", Dumper($self->privateData));
 
@@ -485,10 +490,17 @@ sub driver {
 			$driver = $first;
 			$data->{'dsn_label'} = S_DSN;
 
-			$self->logwarn("invalid driver specified, choosing first available [$driver]");
+			$self->_log->logwarn("WARNING invalid driver specified, choosing first available [$driver]");
 		}
 
-	} elsif ($data->{'dsn_label'} eq S_NULL) {
+	} elsif ($data->{'dsn_label'} eq S_NULL) {	# first time through
+
+		$driver = $first;
+		$data->{'dsn_label'} = S_DSN;
+
+	} elsif (!exists( $available{ $data->{'driver'} } )) {
+
+		# existing driver has since been removed, overridden drivers?
 		$driver = $first;
 		$data->{'dsn_label'} = S_DSN;
 	}
@@ -497,37 +509,43 @@ sub driver {
 }
 
 
-=item B<-drivers>
+=item B<drivers> [LIST]
 
-This list of available drivers, which defaults to those drivers defined by DBI.
+Returns a list of available drivers.
+This defaults to those drivers defined as available by DBI.
+Note that it is possible to override this list, however this should be
+done with caution, as it could cause DBI errors during the login process.
+The most likely use of this method is to constrain the list of drivers
+to a subset of those available by default.
 
 =cut
 
 sub drivers {
 	my $self = shift;
-	my $drivers = shift;
+	my @drivers = @_;
 
 	my $data = $self->privateData;
 	my $w = $self->Subwidget('driver');
 
-	if (defined $drivers) {
+	if (@drivers > 0) {
 
-		$self->_log->logconfess(sprintf "ERROR not an array ref [%s]", Dumper($drivers))
-			unless (ref($drivers) eq 'ARRAY');
+		$w->configure('-choices', \@drivers);
 
-		$w->configure('-choices', $drivers);
 		$self->driver;		# re-establish a default
+	} else {
+		@drivers = @{ $data->{'drivers'} };
 	}
 
-	return $self->_default_value('drivers', $drivers);
+	return $self->_default_value('drivers', \@drivers);
 }
 
 
 =item B<error>
 
 Return the latest error message from the DBI framework following an
-attempt to connect via the specified driver.  If last connection
-attempt was successful, this will return "Connected okay."
+attempt to connect via the specified driver.
+If last connection attempt was successful,
+this will return the DBI message "Connected okay."
 
 =cut
 
@@ -536,9 +554,9 @@ sub error {
 }
 
 
-=item B<password>
+=item B<password> [EXPR]
 
-Set or return the B<password> variable.
+Set or return the B<password> property.
 May not be applicable for all driver types.
 
 =cut
@@ -548,9 +566,9 @@ sub password {
 }
 
 
-=item B<dsn>
+=item B<dsn> [EXPR]
 
-Set or return the B<dsn> variable.
+Set or return the B<dsn> property.
 
 =cut
 
@@ -559,9 +577,9 @@ sub dsn {
 }
 
 
-=item B<username>
+=item B<username> [EXPR]
 
-Set or return the B<username> variable.
+Set or return the B<username> property.
 May not be applicable for all driver types.
 
 =cut
@@ -571,7 +589,7 @@ sub username {
 }
 
 
-=item B<login>([RETRY])
+=item B<login> [RETRY]
 
 A convenience function to show the login dialog and attempt connection.
 The number of attempts is prescribed by the B<RETRY> parameter, which is
@@ -609,8 +627,8 @@ sub login {
 	return $self->dbh;
 }
 
-
 1;
+
 __END__
 
 =back

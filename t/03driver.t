@@ -1,9 +1,9 @@
 #!/usr/bin/perl
 #########################
-# Before `make install' is performed this script should be runnable with
-# `make test'. After `make install' it should work as `perl 03specific.t'
+# Before `make install' is performed this script should0 be runnable with
+# `make test'. After `make install' it should0 work as `perl 03driver.t'
 #
-# 03specific.t - test harness for module Tk::DBI::LoginDialog
+# 03driver.t - test harness for module Tk::DBI::LoginDialog
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published
@@ -15,7 +15,7 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
 # General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
+# You should0 have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #
@@ -59,26 +59,52 @@ sub queue_button {
 Log::Log4perl->easy_init($DEBUG);
 my $log = get_logger(__FILE__);
 
+
 # ---- create ----
-my $ld = $top->LoginDialog;
-isa_ok($ld, $c_this, "new with parms");
+my $ld0 = $top->LoginDialog;
+my $ld1 = $top->LoginDialog;
+
+isa_ok($ld0, $c_this, "new object 0");
+isa_ok($ld1, $c_this, "new object 1");
 
 
+# ---- override driver ----
+my $default = $ld0->driver;
+
+isnt($default, "",				"default driver");
+isnt($ld0->driver("_invalid_"), "_invalid_",	"prevent invalid override");
+is($ld0->driver, $default,			"driver still valid");
+
+$log->debug(sprintf "default drivers [%s]", Dumper($ld0->drivers));
+
+# ---- override drivers ----
 my @drivers = qw/ Oracle ODBC CSV DB2 /;
-SKIP: {
-	skip "error conditions", 1 unless($ENV{'DEBUG'} eq 'FAIL');
 
-	is(ref($ld->drivers(@drivers)), "ARRAY", "should fail");
-};
+is_deeply($ld0->drivers(@drivers), [@drivers], "configure drivers");
 
-is(ref($ld->drivers(\@drivers)), "ARRAY", "configure drivers");
-queue_button($ld, "Cancel");
+queue_button($ld0, "Cancel");
 
 for my $driver (@drivers) {
 
-	is($ld->driver($driver), $driver,	"driver override $driver");
-	queue_button($ld, "Cancel");
+	is($ld0->driver($driver), $driver,	"driver override $driver");
 
-	isnt($ld->driver, "",	"driver set after $driver");
+	queue_button($ld0, "Cancel");
+
+	isnt($ld0->driver, "",			"driver set after $driver");
 }
+
+
+# ---- constrain drivers ----
+my $drivers = $ld1->drivers;
+my $count = @$drivers;
+my $driver = $ld1->driver;
+
+ok($count > 0,			"drivers are available");
+isnt(shift(@$drivers), "",	"remove a driver");
+isnt(pop(@$drivers), "",	"remove another driver");
+ok(scalar(@{ $ld1->drivers }) == ($count - 2),	"have removed");
+isnt($ld1->driver, $driver,	"revised default");
+
+queue_button($ld1, "Login");
+queue_button($ld1, "Login");
 
