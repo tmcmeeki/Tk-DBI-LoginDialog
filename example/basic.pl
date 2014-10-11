@@ -1,9 +1,10 @@
-use Tk;
-require Tk::DBI::LoginDialog;
+#!/usr/bin/perl -w -I../lib
+
+use Tk::DBI::LoginDialog;
 
 my $mw = new MainWindow;
 
-my $tld = $mw->LoginDialog;
+my $ld = $mw->LoginDialog;
 
-$tld->login;
+$ld->login;
 

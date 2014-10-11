@@ -56,7 +56,7 @@ use warnings;
 use Carp qw(cluck confess);     # only use stack backtrace within class
 use Data::Dumper;
 use DBI;
-use Log::Log4perl qw/ get_logger /;
+use Log::Log4perl qw/ get_logger :nowarn /;
 
 # based on Tk widget writers advice at:
 #    http://docstore.mik.ua/orelly/perl3/tk/ch14_01.htm
@@ -397,9 +397,13 @@ sub cb_login {
 		if (defined $dbh) {
 			$data->{'dbh'} = $dbh;
 			$self->_error("Connected okay.");
-		} else {
+		} elsif (defined $DBI::errstr) {
 			$self->_log->logwarn($DBI::errstr);
 			$self->_error($DBI::errstr);
+		} else {
+			my $msg = "WARNING unspecified DBI connect error";
+			$self->_log->logwarn($msg);
+			$self->_error($msg);
 		}
 	} else {
 		$self->_log->logconfess("ERROR invalid action [$button]");
@@ -455,6 +459,9 @@ sub dbh {
 Set or return the B<driver> property.  For specific drivers, the label
 associated with the B<dsn> may also change to better match the nomenclature
 of the specified database management system.
+
+If a driver is specified which is not currently "available", then this 
+method will re-set the driver to the first available.
 
 =cut
 

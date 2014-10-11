@@ -1,6 +1,6 @@
 Changes
 example/basic.pl
-example/simple.pl
+example/oracle.pl
 example/Tk-DBI-LoginDialog.png
 lib/Tk/DBI/LoginDialog.pm
 LICENSE
@@ -16,5 +16,4 @@ README.pod
 t/00basic.t
 t/01method.t
 t/02sub.t
-t/03specific.t
-t/TODO
+t/03driver.t

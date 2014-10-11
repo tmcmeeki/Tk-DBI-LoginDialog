@@ -8,7 +8,7 @@ Tk::DBI::LoginDialog - DBI login dialog class for Perl/Tk.
 
   my $top = new MainWindow;
 
-  my $d = $top->LoginDialog(-instance => 'XE');
+  my $d = $top->LoginDialog(-dsn => 'XE');
  
   my $dbh = $d->login;
 
@@ -81,10 +81,16 @@ C<LoginDialog> provides the following callbacks:
 Per the DialogBox widget, this maps the B<Login> button to the
 L<DBI> login routine.
 
+
+=cut
+
 =item B<-exit>
 
 The sub-routine to call when the B<Exit> button is pressed.
 Defaults to B<Tk::exit>.
+
+
+=cut
 
 =item B<-showcommand>
 
@@ -106,7 +112,7 @@ Valid subwidget names are listed below.
 
 Widget reference of B<driver> drop-down widget.
 
-=item Name:  instance, Class: Entry
+=item Name:  dsn, Class: Entry
 
 =item Name:  username, Class: Entry
 
@@ -137,17 +143,26 @@ Returns the database handle associated with the current object.
 
 =cut
 
-=item B<driver>
+=item B<driver> [EXPR]
 
-Set or return the B<driver> variable.
+Set or return the B<driver> property.  For specific drivers, the label
+associated with the B<dsn> may also change to better match the nomenclature
+of the specified database management system.
+
+If a driver is specified which is not currently "available", then this 
+method will re-set the driver to the first available.
 
 
 =cut
 
-=item B<dbname>
+=item B<drivers> [LIST]
 
-Set or return the B<database name> variable.
-May not be applicable for all driver types.
+Returns a list of available drivers.
+This defaults to those drivers defined as available by DBI.
+Note that it is possible to override this list, however this should be
+done with caution, as it could cause DBI errors during the login process.
+The most likely use of this method is to constrain the list of drivers
+to a subset of those available by default.
 
 
 =cut
@@ -155,37 +170,37 @@ May not be applicable for all driver types.
 =item B<error>
 
 Return the latest error message from the DBI framework following an
-attempt to connect via the specified driver.  If last connection
-attempt was successful, this will return "Connected okay."
+attempt to connect via the specified driver.
+If last connection attempt was successful,
+this will return the DBI message "Connected okay."
 
 
 =cut
 
-=item B<password>
+=item B<password> [EXPR]
 
-Set or return the B<password> variable.
+Set or return the B<password> property.
 May not be applicable for all driver types.
 
 
 =cut
 
-=item B<instance>
+=item B<dsn> [EXPR]
 
-Set or return the B<instance> variable.
+Set or return the B<dsn> property.
+
+
+=cut
+
+=item B<username> [EXPR]
+
+Set or return the B<username> property.
 May not be applicable for all driver types.
 
 
 =cut
 
-=item B<username>
-
-Set or return the B<username> variable.
-May not be applicable for all driver types.
-
-
-=cut
-
-=item B<login>([RETRY])
+=item B<login> [RETRY]
 
 A convenience function to show the login dialog and attempt connection.
 The number of attempts is prescribed by the B<RETRY> parameter, which is
