@@ -313,7 +313,7 @@ sub _paint {
 
 	$w = (); $w = $f->BrowseEntry(-state => 'readonly',
 			-textvariable => \$data->{'driver'},
-			-choices => [ $data->{'drivers'} ],
+			-choices => $data->{'drivers'},
 		)->grid(-row => 1, -column => 2, -sticky => 'w');
 
 	$self->Advertise('driver', $w);
@@ -465,6 +465,10 @@ sub driver {
 
 	my %available = map { $_ => 1 } @{ $data->{'drivers'} };
 	my $first = $data->{'drivers'}->[0];
+	my $default_driver = sub {
+		$driver = $first;
+		$data->{'dsn_label'} = S_DSN;
+	};
 
 	$self->_log->logconfess("ERROR no DBI drivers loaded")
 		unless (defined $first);
@@ -472,8 +476,6 @@ sub driver {
 #	$self->_log->debug(sprintf "DEBUG first [%s] available [%s]", $first, Dumper(\%available));
 
 #	$self->_log->debug(sprintf "DEBUG re_driver [%s] driver [%s]", $self->privateData->{'re_driver'}, $self->privateData->{'driver'});
-
-#	$self->_log->debug(sprintf "DEBUG data [%s]", Dumper($self->privateData));
 
 	if (defined $driver) {
 
@@ -487,22 +489,20 @@ sub driver {
 			}
 		} else {
 
-			$driver = $first;
-			$data->{'dsn_label'} = S_DSN;
-
+			&$default_driver;
+	
 			$self->_log->logwarn("WARNING invalid driver specified, choosing first available [$driver]");
 		}
 
 	} elsif ($data->{'dsn_label'} eq S_NULL) {	# first time through
 
-		$driver = $first;
-		$data->{'dsn_label'} = S_DSN;
+		&$default_driver;
 
 	} elsif (!exists( $available{ $data->{'driver'} } )) {
 
 		# existing driver has since been removed, overridden drivers?
-		$driver = $first;
-		$data->{'dsn_label'} = S_DSN;
+
+		&$default_driver;
 	}
 
 	return $self->_default_value('driver', $driver);
@@ -526,15 +526,30 @@ sub drivers {
 
 	my $data = $self->privateData;
 	my $w = $self->Subwidget('driver');
+	my $f_reset = 0;
 
 	if (@drivers > 0) {
 
-		$w->configure('-choices', \@drivers);
-
 		$self->driver;		# re-establish a default
+		$f_reset = 1;
+
 	} else {
-		@drivers = @{ $data->{'drivers'} };
+		if (@{ $data->{'drivers'} }) {
+
+			@drivers = @{ $data->{'drivers'} };
+
+		} else {
+			# this is no good; someone has emptied the array; fixit
+
+			@drivers = AS_DRIVERS;
+			$f_reset = 1;
+		}
 	}
+
+	my $choices = $w->cget('-choices');
+
+	$w->configure('-choices', \@drivers)
+		unless (@$choices == @drivers || $f_reset || @$choices <= 0);
 
 	return $self->_default_value('drivers', \@drivers);
 }
