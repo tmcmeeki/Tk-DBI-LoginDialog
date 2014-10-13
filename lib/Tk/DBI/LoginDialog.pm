@@ -78,7 +78,7 @@ use constant S_WHATAMI => "Tk::DBI::LoginDialog";
 
 
 # --- package globals ---
-our $VERSION = '1.002';
+our $VERSION = '1.003';
 
 
 # --- package locals ---
@@ -118,7 +118,6 @@ sub Populate {
 
 	my $attribute = $self->privateData;
 	%$attribute = (
-	    logger => get_logger(S_WHATAMI),
 	    dbh => undef,
 	    driver => S_NULL,
 	    drivers => [ AS_DRIVERS ],
@@ -128,6 +127,8 @@ sub Populate {
 	    password => S_NULL,
 	    re_driver => '(' . join('|', sort(keys %dsn_types)) . ')',
 	    username => S_NULL,
+	    _logger => get_logger(S_WHATAMI),
+	    _version => $VERSION,
 	);
 
 	$self->_paint;
@@ -274,7 +275,7 @@ sub _error {
 
 
 sub _log {
-	return shift->privateData->{'logger'};
+	return shift->privateData->{'_logger'};
 }
 
 
@@ -366,6 +367,15 @@ Widget reference of the status/error message widget.
 	$self->Advertise('error', $w);
 
 #	$self->_dump;
+}
+
+
+sub version {
+	my $self = shift;
+
+	my $version = $self->privateData->{'_version'};
+
+	return $version;
 }
 
 

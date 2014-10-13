@@ -218,7 +218,7 @@ The Show method behaves as per the DialogBox widget.
 
 =head1 VERSION
 
-Build V1.002
+Build V1.003
 
 =head1 AUTHOR
 

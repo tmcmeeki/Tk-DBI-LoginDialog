@@ -30,7 +30,7 @@ use Test::More;
 
 my $top; eval { $top = new MainWindow; };
 
-if (Tk::Exists($top)) { plan tests => 31;
+if (Tk::Exists($top)) { plan tests => 35;
 } else { plan skip_all => 'No X server available'; }
 
 my $c_this = 'Tk::DBI::LoginDialog';
@@ -60,7 +60,7 @@ my $ld1 = $top->LoginDialog;
 isa_ok( $ld1, $c_this, "new no parm");
 
 isnt($ld1->driver, "",			"driver non-null");
-isnt($ld1->driver("DUMMY", "DUMMY"),	"driver override invalid");
+isnt($ld1->driver("DUMMY"), "DUMMY",	"driver override invalid");
 
 for my $method (qw/ password dsn username /) {
 
@@ -71,6 +71,18 @@ for my $method (qw/ password dsn username /) {
 	$condition = "method set $method";
 	$value = $ld1->$method("DUMMY");
 	ok($value eq "DUMMY",			$condition);
+}
+
+for my $method (qw/ error /) {
+
+	is($ld1->$method, "",		"null default $method");
+	is($ld1->$method("DUMMY"), "",	"read-only null $method");
+}
+
+for my $method (qw/ version /) {
+
+	isnt($ld1->$method, "",			"non-null default $method");
+	isnt($ld1->$method("DUMMY"), "",	"read-only non-null $method");
 }
 
 for my $option (qw/ -mask -retry /) {
