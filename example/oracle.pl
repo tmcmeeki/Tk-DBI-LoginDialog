@@ -4,7 +4,6 @@ use warnings;
 
 use Tk::DBI::LoginDialog;
 
-
 # ---- globals ----
 my $top = new MainWindow;
 

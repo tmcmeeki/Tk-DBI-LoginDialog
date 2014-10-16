@@ -1,5 +1,9 @@
 Revision history for Perl extension Tk::DBI::LoginDialog.
 
+1.004	Fri, Oct 17, 2014  7:00:28 AM
+	- changed geometry management to FORM for credentialling widgets
+	- added version widget
+
 1.003	Mon, Oct 13, 2014  7:24:19 PM
 	- tweaks from CPAN Testing and CPANTS
 	- added version method

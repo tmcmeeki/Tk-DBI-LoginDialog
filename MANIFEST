@@ -13,3 +13,4 @@ t/00basic.t
 t/01method.t
 t/02sub.t
 t/03driver.t
+t/04version.t
