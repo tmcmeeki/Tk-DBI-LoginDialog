@@ -28,15 +28,20 @@ use Log::Log4perl qw/ :easy /;
 use Tk;
 use Test::More;
 
-my $top; eval { $top = new MainWindow; };
-
-if (Tk::Exists($top)) { plan tests => 46;
-} else { plan skip_all => 'No X server available'; }
-
-my $c_this = 'Tk::DBI::LoginDialog';
-require_ok($c_this);
-
 use constant TIMEOUT => (exists $ENV{TIMEOUT}) ? $ENV{TIMEOUT} : 250; # unit: ms
+
+
+# ---- globals ----
+my $top; eval { $top = new MainWindow; };
+unless (Tk::Exists($top)) { plan skip_all => 'No X server available'; }
+
+Log::Log4perl->easy_init($DEBUG);
+my $log = get_logger(__FILE__);
+
+my $tests = 18;
+my $c_this = 'Tk::DBI::LoginDialog';
+
+require_ok($c_this);
 
 sub queue_button {
 	my ($o,$action,$timeout)=@_;
@@ -52,12 +57,9 @@ sub queue_button {
 	$button->after($timeout, sub{ $button->invoke; });
 
 	is($o->Show, $action,		"show $action");
+
+	$tests++;
 }
-
-
-# ---- globals ----
-Log::Log4perl->easy_init($DEBUG);
-my $log = get_logger(__FILE__);
 
 
 # ---- create ----
@@ -96,6 +98,8 @@ for my $driver (@drivers) {
 	queue_button($ld0, "Cancel");
 
 	isnt($ld0->driver, "",			"driver set after $driver");
+
+	$tests += 2;
 }
 
 
@@ -113,7 +117,7 @@ isnt($removed, "",			"remove driver non-null");
 isnt($removed, $ld1->driver,		"remove a driver");
 isnt($driver, $ld1->driver,		"check removed");
 ok(@{ $ld1->drivers } == $count - 1,	"one less driver available");
-queue_button($ld1, "Login");
+queue_button($ld1, "Cancel");
 
 $removed = pop @{ $ld1->drivers };
 $ld1->_error("condition: removed $removed");
@@ -123,7 +127,7 @@ isnt($driver, $ld1->driver,		"check another removed");
 ok(@{ $ld1->drivers } == $count - 2,	"have removed again");
 isnt($ld1->driver, $driver,		"revised default");
 
-queue_button($ld1, "Login");
+queue_button($ld1, "Cancel");
 
 my $max = @{ $ld1->drivers };
 for (my $i = 0; $i < $max; $i++) {
@@ -131,9 +135,14 @@ for (my $i = 0; $i < $max; $i++) {
 	$removed = pop @{ $ld1->drivers };
 	$ld1->_error("condition: removing $removed");
 	ok(@{ $ld1->drivers } > 0,	"removing $removed");
-	queue_button($ld1, "Login");
+	queue_button($ld1, "Cancel");
+
+	$tests++;
 }
 
 ok(@{ $ld1->drivers } == $count,	"restored default drivers");
 
-queue_button($ld1, "Login");
+queue_button($ld1, "Cancel");
+
+done_testing($tests);
+

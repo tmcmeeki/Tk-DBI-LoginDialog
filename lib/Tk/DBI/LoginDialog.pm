@@ -12,6 +12,8 @@ Tk::DBI::LoginDialog - DBI login dialog class for Perl/Tk.
 
   my $d = $top->LoginDialog(-dsn => 'XE');
  
+  $d->username("scott");	# default a username
+
   my $dbh = $d->login;
 
   print $d->error . "\n"
@@ -28,7 +30,7 @@ Tk::DBI::LoginDialog - DBI login dialog class for Perl/Tk.
 
 "Tk::DBI::LoginDialog" is a dialog widget which interacts with the DBI
 interface specifically to attempt a connection to a database, and thus
-returning a database handle.
+returns a database handle.
 
 This widget allows the user to enter username and password details
 into the dialog, and also to select driver, and other driver-specific
@@ -222,38 +224,6 @@ sub _default_value {
 		return $value;
 	}
 	return $data->{$attribute};
-}
-
-
-sub _dump {
-	my $self = shift;
-	my $w = shift;	# widget
-	my $l = shift;	# level
-	my $property;
-
-	$w = $self unless (defined $w);
-	$l = 0 unless (defined $l);
-
-	if ($w->class eq 'Button' || $w->class eq 'Label') {
-		$property = '-text';
-	}
-
-	$self->_log->debug(sprintf "level %02d path [%s] name [%s] class [%s] what [%s]",
-		$l++,
-		$w->PathName,
-		$w->name,
-		$w->class,
-		(defined $property) ? $w->cget($property) : "n/a",
-	);
-
-	if ($w->can('Subwidget')) {
-		for my $child (sort $w->Subwidget) {
-			$self->_dump($child, $l);
-		}
-	}
-
-	$self->_log->debug(sprintf 'ConfigSpecs [%s]', join(' ', keys($w->ConfigSpecs)))
-		if ($l == 1);
 }
 
 
@@ -475,7 +445,6 @@ sub cb_populate {
 }
 
 
-# --- public methods ---
 =head1 METHODS
 
 =over 4
@@ -599,6 +568,18 @@ sub drivers {
 }
 
 
+=item B<dsn> [EXPR]
+
+Set or return the B<dsn> property.  In some drivers this refers to the
+database name or database instance.
+
+=cut
+
+sub dsn {
+	return shift->_default_value('dsn', shift);
+}
+
+
 =item B<error>
 
 Return the latest error message from the DBI framework following an
@@ -610,6 +591,41 @@ this will return the DBI message "Connected okay."
 
 sub error {
 	return shift->_error;
+}
+
+
+=item B<login> [RETRY]
+
+A convenience function to show the login dialog and attempt connection.
+The number of attempts is prescribed by the B<RETRY> parameter, which is
+optional.
+Returns a DBI database handle, subject to the DBI B<connect> method.
+
+=cut
+
+sub login {
+	my $self = shift;
+	my $retry = (@_) ? shift : $self->cget('-retry');
+
+	# override silly values for retry which might have been 
+	# configured by the calling application
+
+	if ($retry <= 0) {
+		$retry = N_RETRY;
+
+		$self->configure('-retry' => $retry);
+
+		$self->_log->debug("-retry reset to [$retry]");
+	}
+
+	while ($retry-- > 0) {
+
+		my $button = $self->Show;
+
+		last if (defined $self->dbh || $button =~ "Cancel");
+	} 
+
+	return $self->dbh;
 }
 
 
@@ -625,16 +641,9 @@ sub password {
 }
 
 
-=item B<dsn> [EXPR]
+=item B<Show>
 
-Set or return the B<dsn> property.
-
-=cut
-
-sub dsn {
-	return shift->_default_value('dsn', shift);
-}
-
+The Show method behaves as per the DialogBox widget.
 
 =item B<username> [EXPR]
 
@@ -677,44 +686,6 @@ sub version {
 	return $VERSION;
 }
 
-
-=item B<login> [RETRY]
-
-A convenience function to show the login dialog and attempt connection.
-The number of attempts is prescribed by the B<RETRY> parameter, which is
-optional.
-Returns a DBI database handle, subject to the DBI B<connect> method.
-
-=item B<Show>
-
-The Show method behaves as per the DialogBox widget.
-
-=cut
-
-sub login {
-	my $self = shift;
-	my $retry = (@_) ? shift : $self->cget('-retry');
-
-	# override silly values for retry which might have been 
-	# configured by the calling application
-
-	if ($retry <= 0) {
-		$retry = N_RETRY;
-
-		$self->configure('-retry' => $retry);
-
-		$self->_log->debug("-retry reset to [$retry]");
-	}
-
-	while ($retry-- > 0) {
-
-		my $button = $self->Show;
-
-		last if (defined $self->dbh || $button =~ "Cancel");
-	} 
-
-	return $self->dbh;
-}
 
 1;
 
