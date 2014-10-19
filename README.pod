@@ -10,6 +10,8 @@ Tk::DBI::LoginDialog - DBI login dialog class for Perl/Tk.
 
   my $d = $top->LoginDialog(-dsn => 'XE');
  
+  $d->username("scott");	# default a username
+
   my $dbh = $d->login;
 
   print $d->error . "\n"
@@ -26,7 +28,7 @@ Tk::DBI::LoginDialog - DBI login dialog class for Perl/Tk.
 
 "Tk::DBI::LoginDialog" is a dialog widget which interacts with the DBI
 interface specifically to attempt a connection to a database, and thus
-returning a database handle.
+returns a database handle.
 
 This widget allows the user to enter username and password details
 into the dialog, and also to select driver, and other driver-specific
@@ -112,6 +114,9 @@ Valid subwidget names are listed below.
 
 Widget reference of B<driver> drop-down widget.
 
+
+=cut
+
 =item Name:  dsn, Class: Entry
 
 =item Name:  username, Class: Entry
@@ -167,12 +172,30 @@ to a subset of those available by default.
 
 =cut
 
+=item B<dsn> [EXPR]
+
+Set or return the B<dsn> property.  In some drivers this refers to the
+database name or database instance.
+
+
+=cut
+
 =item B<error>
 
 Return the latest error message from the DBI framework following an
 attempt to connect via the specified driver.
 If last connection attempt was successful,
 this will return the DBI message "Connected okay."
+
+
+=cut
+
+=item B<login> [RETRY]
+
+A convenience function to show the login dialog and attempt connection.
+The number of attempts is prescribed by the B<RETRY> parameter, which is
+optional.
+Returns a DBI database handle, subject to the DBI B<connect> method.
 
 
 =cut
@@ -185,12 +208,9 @@ May not be applicable for all driver types.
 
 =cut
 
-=item B<dsn> [EXPR]
+=item B<Show>
 
-Set or return the B<dsn> property.
-
-
-=cut
+The Show method behaves as per the DialogBox widget.
 
 =item B<username> [EXPR]
 
@@ -200,16 +220,13 @@ May not be applicable for all driver types.
 
 =cut
 
-=item B<login> [RETRY]
+=item B<version> [0|1]
 
-A convenience function to show the login dialog and attempt connection.
-The number of attempts is prescribed by the B<RETRY> parameter, which is
-optional.
-Returns a DBI database handle, subject to the DBI B<connect> method.
-
-=item B<Show>
-
-The Show method behaves as per the DialogBox widget.
+Toggle the display of this widget's version number (module version).
+This can only be done programmatically.  
+The default behaviour is to hide the version.
+Irrespective of the argument passed, this routine will return the 
+version number.
 
 
 =cut
@@ -218,7 +235,7 @@ The Show method behaves as per the DialogBox widget.
 
 =head1 VERSION
 
-Build V1.003
+Build V1.004
 
 =head1 AUTHOR
 
