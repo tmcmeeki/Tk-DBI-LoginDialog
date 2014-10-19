@@ -254,8 +254,13 @@ sub _paint {
 	my $data = $self->privateData;
 	my $t = $self->Subwidget('top');
 
+	# First frame holds the credentialling widgets (the main frame!)
 
-	# First frame holds the "hidden" version widget
+	my $f = $t->Frame(-borderwidth => 3,
+		)->pack(-side => 'top', -fill => 'both', -expand => 1);
+
+
+	# Second frame holds the "hidden" version widget
 
 	my $fv = $t->Frame()->pack(-side => 'top');
 
@@ -264,15 +269,11 @@ sub _paint {
 	my $ver = $fv->ROText(-height => 1, -width => length($str),
 		-wrap => 'none', -relief => 'flat');
 
-	$ver->insert('end', $str);
+	#$ver->insert('end', $str);
+	$ver->Contents($str);
 
 	$self->Advertise('_version', $ver);	# don't document this!
 
-
-	# Second frame holds the credentialling widgets (the main frame!)
-
-	my $f = $t->Frame(-borderwidth => 3,
-		)->pack(-side => 'top', -fill => 'both', -expand => 1);
 
 	# create all widgets first then handle geometry later
 
