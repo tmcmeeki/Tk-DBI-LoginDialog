@@ -136,6 +136,7 @@ sub Populate {
 
 	$self->Advertise('LoginDialog' => $self);
 
+	$specs{-connect} = [ qw/ METHOD connect Connect /, undef ];
 	$specs{-dbh} = [ qw/ METHOD dbh Dbh /, undef ];
 	$specs{-driver} = [ qw/ METHOD driver Driver /, undef ];
 	$specs{-drivers} = [ qw/ METHOD drivers Drivers /, undef ];

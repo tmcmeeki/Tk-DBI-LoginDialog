@@ -30,7 +30,7 @@ use Test::More;
 
 my $top; eval { $top = new MainWindow; };
 
-if (Tk::Exists($top)) { plan tests => 13;
+if (Tk::Exists($top)) { plan tests => 16;
 } else { plan skip_all => 'No X server available'; }
 
 my $c_this = 'Tk::DBI::LoginDialog';
@@ -79,9 +79,19 @@ $ld->driver("ExampleP");
 queue_button($ld, "Login", "s");
 isa_ok($ld->dbh, "DBI::db",	"non-null dbh");
 
-# ---- loop ----
+
+# ---- connection ----
+my $s_ok = "onnected";
+my $driver = $ld->driver;
+isnt("", $driver,		"driver initialisation");
+#my ($dbh, $msg) = $ld->connect();
+my ($dbh, $msg) = $ld->connect($driver, "", "", "");
+ok(defined($dbh),		"connect default");
+like($msg, qr/$s_ok/,		"message default");
+
 queue_button($ld, "Login", "l");
-like($ld->error, qr/onnected/,        "error");
+like($ld->error, qr/$s_ok/,	"login okay");
+
 
 # ---- clean-up ----
 $ld->destroy;
