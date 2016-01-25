@@ -158,6 +158,14 @@ The character or string used to hide (mask) the password.
 
 	$specs{-mask} = [ qw/ PASSIVE mask Mask /, CHAR_MASK ];
 
+=item B<-pressed>
+
+The name of the button pressed during a login sequence.
+
+=cut
+
+	$specs{-pressed} = [ qw/ PASSIVE pressed Pressed /, S_NULL ];
+
 =item B<-retry>
 
 The number of times that attempts will be made to login to the database
@@ -277,15 +285,17 @@ sub _paint {
 
 	# create all widgets first then handle geometry later
 
-#	+-------------------------+
-#	| label | BrowseEntry     |
-#	+-------------------------+
-#	| label | Entry x 3       |
-#	+-------------------------+
-#	| ROText (error)          |
-#	+-------------------------+
-#	| label (hidden, version) |
-#	+-------------------------+
+#	+---------------------+
+#	| label | BrowseEntry | driver
+#	+---------------------+
+#	| label | Entry       | dsn
+#	| label | Entry       | username
+#	| label | Entry       | password
+#	+---------------------+
+#	| ROText              | error
+#	+---------------------+
+#	| label (hidden)      | version
+#	+---------------------+
 
 	my $ld = $f->Label(-text => 'Driver', );
 	my $li = $f->Label(-textvariable => \$data->{'dsn_label'},);
@@ -336,6 +346,23 @@ Widget references for the basic credential entry widgets.
 		$e{$short} = $e;
 	}
 
+=item Name:  L_driver, Class: Label
+
+=item Name:  L_dsn, Class: Label
+
+=item Name:  L_username, Class: Label
+
+=item Name:  L_password, Class: Label
+
+Widget references of the left-most label widgets.
+
+=cut
+
+	$self->Advertise('L_driver', $ld);
+	$self->Advertise('L_dsn', $li);
+	$self->Advertise('L_username', $lu);
+	$self->Advertise('L_password', $lp);
+
 =item Name:  error, Class: ROText
 
 Widget reference of the status/error message widget.
@@ -383,7 +410,16 @@ sub cb_login {
 	my $button = shift;
 	my $data = $self->privateData;
 
+	unless (defined $button) { # Bug #108406 fix for WM event, e.g. close
+
+		$self->_log->logwarn("WARNING no action detected");
+		$self->configure('-pressed' => S_NULL);
+
+		return;
+	}
+
 #	$self->_log->debug("DEBUG button [$button]");
+	$self->configure('-pressed' => $button);
 
 	if ($button eq 'Exit') {
 
@@ -392,27 +428,13 @@ sub cb_login {
 	} elsif ($button eq 'Cancel') {
 
 	} elsif ($button eq 'Login') {
-		$self->_log->debug("attempting to login to database");
 
-		my $data_source = join(':', "DBI", $data->{'driver'}, 
-			defined($data->{'dsn'}) ? $data->{'dsn'} : S_NULL
-			);
+		my ($dbh,$msg) = $self->connect($data->{'driver'}, $data->{'dsn'}, $data->{'username'}, $data->{'password'});
 
-		$self->_log->debug("data_source [$data_source]");
+		$data->{'dbh'} = $dbh
+			if (defined $dbh);
 
-		my $dbh = DBI->connect($data_source, $data->{'username'}, $data->{'password'});
-
-		if (defined $dbh) {
-			$data->{'dbh'} = $dbh;
-			$self->_error("Connected okay.");
-		} elsif (defined $DBI::errstr) {
-			$self->_log->logwarn($DBI::errstr);
-			$self->_error($DBI::errstr);
-		} else {
-			my $msg = "WARNING unspecified DBI connect error";
-			$self->_log->logwarn($msg);
-			$self->_error($msg);
-		}
+		$self->_error($msg);
 	} else {
 		$self->_log->logconfess("ERROR invalid action [$button]");
 	}
@@ -449,6 +471,50 @@ sub cb_populate {
 =head1 METHODS
 
 =over 4
+
+=item B<connect>(Driver, DSN, Username, Password)
+
+The DBI connection routine.  This does not interact with any Tk widgets
+so can be called natively, if required.  This routine is also called when
+the B<Login> button is pressed.
+
+=cut
+
+sub connect {
+	my $self = shift;
+	$self->_log->logconfess("SYNTAX: connect(Driver, DSN, Username, Password)") unless (@_ == 4);
+	my $driver = shift; 
+	my $dsn = shift;
+	my $username = shift;
+	my $password = shift;
+
+	$self->_log->debug("attempting to login to database");
+
+	my $source = join(':', "DBI", $driver, defined($dsn) ? $dsn : S_NULL);
+
+	$self->_log->debug("source [$source]");
+
+	my $dbh = DBI->connect($source, $username, $password);
+
+	my $msg;
+
+	if (defined $dbh) {
+
+		$msg = "Connected okay.";
+		$self->_log->info($msg);
+
+	} elsif (defined $DBI::errstr) {
+
+		$msg = $DBI::errstr;
+		$self->_log->logwarn($msg);
+
+	} else {
+		$msg = "WARNING unspecified DBI connect error";
+		$self->_log->logwarn($msg);
+	}
+
+	return ($dbh, $msg);
+}
 
 =item B<dbh>
 

@@ -30,7 +30,7 @@ use Test::More;
 
 my $top; eval { $top = new MainWindow; };
 
-if (Tk::Exists($top)) { plan tests => 10;
+if (Tk::Exists($top)) { plan tests => 13;
 } else { plan skip_all => 'No X server available'; }
 
 my $c_this = 'Tk::DBI::LoginDialog';
@@ -53,9 +53,11 @@ sub queue_button {
 	$button->after(TIMEOUT, sub{ $button->invoke; });
 
 	if ($method eq "s") {
-		is($o->Show, $action,		"show $action");
+		is($o->Show, $action,			"show $action");
+
+		is($o->cget('-pressed'), $action,	"pressed $action");
 	} else {
-		isa_ok($o->login(1), "DBI::db",	"$action");
+		isa_ok($o->login(1), "DBI::db",		"$action");
 	}
 }
 

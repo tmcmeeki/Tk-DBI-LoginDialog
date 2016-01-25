@@ -30,7 +30,7 @@ use Test::More;
 
 my $top; eval { $top = new MainWindow; };
 
-if (Tk::Exists($top)) { plan tests => 217;
+if (Tk::Exists($top)) { plan tests => 305;
 } else { plan skip_all => 'No X server available'; }
 
 my $c_this = 'Tk::DBI::LoginDialog';
