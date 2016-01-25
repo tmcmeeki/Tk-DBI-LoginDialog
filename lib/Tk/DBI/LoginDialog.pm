@@ -477,7 +477,8 @@ sub cb_populate {
 
 The DBI connection routine.  This does not interact with any Tk widgets
 so can be called natively, if required.  This routine is also called when
-the B<Login> button is pressed.
+the B<Login> button is pressed.  Returns a database handle and a string
+message indicating status of connection attempt.
 
 =cut
 
