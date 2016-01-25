@@ -11,6 +11,9 @@ WriteMakefile(
     MIN_PERL_VERSION => '5.010001',
     LICENSE           => 'gpl_2',
     VERSION_FROM      => 'lib/Tk/DBI/LoginDialog.pm', # finds $VERSION
+    BUILD_REQUIRES    => {
+        'Test::More' => '1.001014',
+    },
     PREREQ_PM         => {
         'Carp' => '0',
         'Data::Dumper' => '0',
