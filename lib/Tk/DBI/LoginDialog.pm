@@ -491,12 +491,12 @@ sub cb_login {
 
 		return;
 	}
+	$self->configure('-pressed' => $button);
+
 
 	my $button_id = $self->_button($button);
-
 	$self->_log->trace("button_id [$button_id] button [$button]");
 
-	$self->configure('-pressed' => $button);
 
 	if ($button_id eq "button") {		# default 'Cancel' button
 
