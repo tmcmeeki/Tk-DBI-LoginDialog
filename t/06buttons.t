@@ -33,7 +33,7 @@ use lib 't';
 use tester;
 
 my $ot = tester->new;
-$ot->tests(12);
+$ot->tests(8);
 
 
 # ---- module ----
