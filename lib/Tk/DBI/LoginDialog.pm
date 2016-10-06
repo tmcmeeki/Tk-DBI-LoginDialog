@@ -71,6 +71,7 @@ Construct Tk::Widget 'LoginDialog';
 
 # package constants
 
+use constant A_BUTTONS => qw/ Cancel Exit Login /;
 use constant AS_DRIVERS => sort(DBI->available_drivers);
 use constant CHAR_MASK => '*';	# masking character
 use constant N_RETRY => 3;	# number of loops to attempt login
@@ -96,10 +97,18 @@ sub ClassInit {
 
 sub CreateArgs {
 	my($class, $mw, $args) = @_;
-	my @buttons = qw/ Cancel Exit Login /;
 
-	$args->{-buttons} = [ @buttons ];
-	$args->{-default_button} = 'Login';
+	# allow button labels to be overridden in class initialisation
+	if (exists $args->{-buttons}) {
+
+		$args->{-default_button} = $args->{-buttons}->[-1]
+			unless (exists $args->{-default_button});
+
+	} else {
+		my @buttons = A_BUTTONS;
+		$args->{-buttons} = [ @buttons ];
+		$args->{-default_button} = $buttons[-1];
+	}
 
 #	printf "DEBUG args [%s]\n", Dumper($args);
 
@@ -120,6 +129,7 @@ sub Populate {
 
 	my $attribute = $self->privateData;
 	%$attribute = (
+	    buttons => undef,
 	    dbh => undef,
 	    driver => S_NULL,
 	    drivers => [ AS_DRIVERS ],
@@ -138,6 +148,7 @@ sub Populate {
 
 	$specs{-connect} = [ qw/ METHOD connect Connect /, undef ];
 	$specs{-dbh} = [ qw/ METHOD dbh Dbh /, undef ];
+	$specs{-disconnect} = [ qw/ METHOD disconnect Disconnect /, undef ];
 	$specs{-driver} = [ qw/ METHOD driver Driver /, undef ];
 	$specs{-drivers} = [ qw/ METHOD drivers Drivers /, undef ];
 	$specs{-dsn} = [ qw/ METHOD dsn dsn /, undef ];
@@ -222,6 +233,43 @@ This callback refreshes items in the dialog as part of the B<Show> method.
 
 
 # --- private methods ---
+sub _button {
+	my $self = shift;
+	my $pressed = shift;
+	my $data = $self->privateData;
+	my %button;
+
+	if (defined $data->{'buttons'}) {
+
+		%button = %{ $data->{'buttons'} };
+	} else {
+
+		# populate button hash with button text, e.g.
+		#	{ button -> Cancel, button1 -> Exit, button2 -> Login }
+
+		for ($self->Subwidget) {
+			if ($_->class eq 'Button') {
+
+				$button{$_->name} = $_->cget('-text');
+
+       	         		$self->_log->trace(sprintf "subwidget name [%s]", $_->name);
+			}
+		}
+
+		$data->{'buttons'} = { %button };
+	}
+
+	$self->_log->trace(sprintf "button [%s]", Dumper(\%button));
+
+	for (keys %button) {
+		return $_
+			if ($button{$_} eq $pressed);
+	}
+
+	return undef;
+}
+
+
 sub _default_value {
 	my $self = shift;
 	my $attribute = shift;
@@ -254,6 +302,31 @@ sub _error {
 
 sub _log {
 	return shift->privateData->{'_logger'};
+}
+
+
+sub _message {
+#	echo either the message passed or the DBI error string
+#	return the string.
+#
+	my $self = shift;
+	my $msg = shift;
+
+	if (defined $msg) {
+
+		$self->_log->info($msg);
+
+	} elsif (defined $DBI::errstr) {
+
+		$msg = $DBI::errstr;
+		$self->_log->logwarn($msg);
+
+	} else {
+		$msg = "WARNING unspecified DBI connect error";
+		$self->_log->logwarn($msg);
+	}
+
+	return $msg;
 }
 
 
@@ -411,6 +484,10 @@ sub cb_login {
 	my $button = shift;
 	my $data = $self->privateData;
 
+	my $button_id = $self->_button($button);
+
+	$self->_log->trace("button_id [$button_id] button [$button]");
+
 	unless (defined $button) { # Bug #108406 fix for WM event, e.g. close
 
 		$self->_log->logwarn("WARNING no action detected");
@@ -419,16 +496,15 @@ sub cb_login {
 		return;
 	}
 
-#	$self->_log->debug("DEBUG button [$button]");
 	$self->configure('-pressed' => $button);
 
-	if ($button eq 'Exit') {
+	if ($button_id eq "button") {		# default 'Cancel' button
+
+	} elsif ($button_id eq "button1") {	# default 'Exit' button
 
 		$self->Callback('-exit');
 
-	} elsif ($button eq 'Cancel') {
-
-	} elsif ($button eq 'Login') {
+	} elsif ($button_id eq "button2") {	# 'default Login' button
 
 		my ($dbh,$msg) = $self->connect($data->{'driver'}, $data->{'dsn'}, $data->{'username'}, $data->{'password'});
 
@@ -498,22 +574,7 @@ sub connect {
 
 	my $dbh = DBI->connect($source, $username, $password);
 
-	my $msg;
-
-	if (defined $dbh) {
-
-		$msg = "Connected okay.";
-		$self->_log->info($msg);
-
-	} elsif (defined $DBI::errstr) {
-
-		$msg = $DBI::errstr;
-		$self->_log->logwarn($msg);
-
-	} else {
-		$msg = "WARNING unspecified DBI connect error";
-		$self->_log->logwarn($msg);
-	}
+	my $msg = (defined $dbh) ? $self->_message("Connected okay.") : $self->_message;
 
 	return ($dbh, $msg);
 }
@@ -528,6 +589,35 @@ sub dbh {
 	return shift->_default_value('dbh');
 }
 
+
+=item B<disconnect>
+
+Will call the DBI disconnection routine, using the stored handle.
+This routine is called when the B<Login> button is pressed. 
+
+=cut
+
+sub disconnect {
+	my $self = shift;
+	$self->_log->logconfess("SYNTAX: disconnect") unless (@_ == 0);
+
+	my $dbh = $self->dbh;
+	my $msg;
+
+	if (defined $dbh) {
+
+		$self->_log->debug("attempting to disconnect from database");
+
+		$dbh->disconnect;
+
+		$msg = $self->_message("Disonnected okay.");
+
+	} else {
+		$msg = $self->_message("no database connection exists");
+	}
+
+	return $msg;
+}
 
 =item B<driver> [EXPR]
 
@@ -691,7 +781,8 @@ sub login {
 
 		my $button = $self->Show;
 
-		last if (defined $self->dbh || $button =~ "Cancel");
+		last if (defined $self->dbh);
+		last if (defined $button && $button eq "Cancel");
 	} 
 
 	return $self->dbh;

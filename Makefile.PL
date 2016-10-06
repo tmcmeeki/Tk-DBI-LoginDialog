@@ -12,7 +12,7 @@ WriteMakefile(
     LICENSE           => 'gpl_2',
     VERSION_FROM      => 'lib/Tk/DBI/LoginDialog.pm', # finds $VERSION
     BUILD_REQUIRES    => {
-        'Test::More' => '1.001014',
+        'Test::More' => '0',
     },
     PREREQ_PM         => {
         'Carp' => '0',

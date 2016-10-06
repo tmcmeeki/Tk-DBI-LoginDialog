@@ -5,6 +5,7 @@ Revision history for Perl extension Tk::DBI::LoginDialog.
 	- added -pressed property to allow polling of pressed button
 	- advertises Label widgets in-case of requirement for relabelling
 	- subordinated the DBI login routine to its own connect() function
+	- added a disconnect() function
 
 1.004	Fri, Oct 17, 2014  7:00:28 AM
 	- changed geometry management to FORM for credentialling widgets

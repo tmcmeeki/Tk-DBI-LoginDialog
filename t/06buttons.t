@@ -1,9 +1,9 @@
 #!/usr/bin/perl
 #########################
 # Before `make install' is performed this script should be runnable with
-# `make test'. After `make install' it should work as `perl 05labels.t'
+# `make test'. After `make install' it should work as `perl 06buttons.t'
 #
-# 05labels.t - test harness for module Tk::DBI::LoginDialog
+# 06buttons.t - test harness for module Tk::DBI::LoginDialog
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published
@@ -33,16 +33,12 @@ use lib 't';
 use tester;
 
 my $ot = tester->new;
-$ot->tests(18);
+$ot->tests(12);
 
 
 # ---- module ----
 my $c_this = 'Tk::DBI::LoginDialog';
 require_ok($c_this);
-
-
-# ---- constants ----
-use constant ATTR_LABEL => '-text';
 
 
 # ---- globals ----
@@ -51,51 +47,23 @@ my $log = get_logger(__FILE__);
 my $top = $ot->top;
 
 
-# ---- create ----
-my $tld = $top->LoginDialog;
-
-isa_ok($tld, $c_this,	"new object");
-
-isnt("", $tld->driver,	"default dsn_label");
+# ---- test buttons ----
+my $tld0 = $top->LoginDialog;
+isa_ok($tld0, $c_this,	"new object 1");
+$ot->queue_button($tld0, "Cancel");
 
 
-# ---- get sub-widgets ----
-my $cycle = 1;
-my ($w, @w);
-for my $lt (qw/ driver username password /) {
-
-	my $ln = "L_" . $lt;
-
-	$w = $tld->Subwidget($ln);
-
-	isa_ok($w, "Tk::Label",	"sub class $cycle");
-
-	my $lv = $w->cget(ATTR_LABEL);
-
-	is(lc($lv), lc($lt),	"widget text $cycle");
-
-	push @w, $w;
-
-	$cycle++;
-}
+my @buttons = qw/ help me rhonda /;
+my $tld1 = $top->LoginDialog(-buttons => [ @buttons ]);
+isa_ok($tld1, $c_this,	"new object 2");
+$ot->queue_button($tld1, $buttons[0]);
+$ot->queue_button($tld1, $buttons[-1]);
 
 
-# ---- modify label text ----
-my $s_override = "mylabel_";
-for $w (@w) {
-
-	my $dfl = $w->cget(ATTR_LABEL);
-
-	isnt($dfl, $s_override,		"default $cycle");
-
-	$w->configure('-text' => $s_override . $cycle);
-
-	$ot->queue_button($tld, "Cancel");
-
-	my $new = $w->cget(ATTR_LABEL);
-
-	like($new, qr/$s_override/,	"override $cycle");
-
-	$cycle++;
-}
+my $b_dodgy ="extra";
+unshift @buttons, $b_dodgy;
+my $tld2 = $top->LoginDialog(-buttons => [ @buttons ]);
+isa_ok($tld2, $c_this,	"new object 3");
+$ot->queue_button($tld2, $b_dodgy);
+#$ot->queue_button($tld2, $buttons[-1]);	# will fail; invalid action
 
