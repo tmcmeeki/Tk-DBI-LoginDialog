@@ -1,5 +1,8 @@
 Revision history for Perl extension Tk::DBI::LoginDialog.
 
+1.006	Fri, Oct  7, 2016  7:11:51 AM
+	- Fixed button hard-naming in login (retry) routine.
+
 1.005	Tue, Jan 26, 2016  1:01:58 AM
 	- Fixed Bug #108406
 	- added -pressed property to allow polling of pressed button

@@ -81,7 +81,7 @@ use constant S_WHATAMI => "Tk::DBI::LoginDialog";
 
 
 # --- package globals ---
-our $VERSION = '1.005';
+our $VERSION = '1.006';
 
 
 # --- package locals ---
@@ -782,7 +782,12 @@ sub login {
 		my $button = $self->Show;
 
 		last if (defined $self->dbh);
-		last if (defined $button && $button eq "Cancel");
+
+		if (defined $button) {
+			my $button_id = $self->_button($button);
+
+			last if ($button_id eq "button"); # 'Cancel' button
+		}
 	} 
 
 	return $self->dbh;
