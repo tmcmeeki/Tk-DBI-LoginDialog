@@ -2,6 +2,7 @@ Changes
 example/basic.pl
 example/oracle.pl
 example/Tk-DBI-LoginDialog.png
+example/Tk-DBI-LoginDialog-1.005.PNG
 lib/Tk/DBI/LoginDialog.pm
 LICENSE
 Makefile.PL
@@ -9,9 +10,11 @@ MANIFEST			This list of files
 README
 README.md
 README.pod
+t/tester.pm
 t/00basic.t
 t/01method.t
 t/02sub.t
 t/03driver.t
 t/04version.t
 t/05labels.t
+t/06buttons.t

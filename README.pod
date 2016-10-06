@@ -62,6 +62,13 @@ The character or string used to hide (mask) the password.
 
 =cut
 
+=item B<-pressed>
+
+The name of the button pressed during a login sequence.
+
+
+=cut
+
 =item B<-retry>
 
 The number of times that attempts will be made to login to the database
@@ -128,6 +135,19 @@ Widget references for the basic credential entry widgets.
 
 =cut
 
+=item Name:  L_driver, Class: Label
+
+=item Name:  L_dsn, Class: Label
+
+=item Name:  L_username, Class: Label
+
+=item Name:  L_password, Class: Label
+
+Widget references of the left-most label widgets.
+
+
+=cut
+
 =item Name:  error, Class: ROText
 
 Widget reference of the status/error message widget.
@@ -141,9 +161,27 @@ Widget reference of the status/error message widget.
 
 =over 4
 
+=item B<connect>(Driver, DSN, Username, Password)
+
+The DBI connection routine.  This does not interact with any Tk widgets
+so can be called natively, if required.  This routine is also called when
+the B<Login> button is pressed.  Returns a database handle and a string
+message indicating status of connection attempt.
+
+
+=cut
+
 =item B<dbh>
 
 Returns the database handle associated with the current object.
+
+
+=cut
+
+=item B<disconnect>
+
+Will call the DBI disconnection routine, using the stored handle.
+This routine is called when the B<Login> button is pressed. 
 
 
 =cut
@@ -235,7 +273,7 @@ version number.
 
 =head1 VERSION
 
-Build V1.004
+Build V1.005
 
 =head1 AUTHOR
 
