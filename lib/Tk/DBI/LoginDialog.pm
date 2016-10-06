@@ -484,10 +484,6 @@ sub cb_login {
 	my $button = shift;
 	my $data = $self->privateData;
 
-	my $button_id = $self->_button($button);
-
-	$self->_log->trace("button_id [$button_id] button [$button]");
-
 	unless (defined $button) { # Bug #108406 fix for WM event, e.g. close
 
 		$self->_log->logwarn("WARNING no action detected");
@@ -495,6 +491,10 @@ sub cb_login {
 
 		return;
 	}
+
+	my $button_id = $self->_button($button);
+
+	$self->_log->trace("button_id [$button_id] button [$button]");
 
 	$self->configure('-pressed' => $button);
 
