@@ -1,7 +1,7 @@
 package tester;
 #########################
-# Before `make install' is performed this script should be runnable with
-# `make test'. After `make install' it should work as `perl 05labels.t'
+# This module assist in testing the Tk dialog functions, by issuing
+# button events and thus allowing the dialog to be seen "briefly".
 #
 # tester.pm - test harness for module Tk::DBI::LoginDialog
 #
