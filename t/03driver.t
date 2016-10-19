@@ -28,38 +28,24 @@ use Log::Log4perl qw/ :easy /;
 use Tk;
 use Test::More;
 
-use constant TIMEOUT => (exists $ENV{TIMEOUT}) ? $ENV{TIMEOUT} : 250; # unit: ms
+# ---- test harness ----
+use lib 't';
+use tester;
+
+my $ot = tester->new;
+#$ot->tests(18);
+my $tests = 18;  # we dynamically increment as number of DBI drivers unknown
 
 
 # ---- globals ----
-my $top; eval { $top = new MainWindow; };
-unless (Tk::Exists($top)) { plan skip_all => 'No X server available'; }
-
 Log::Log4perl->easy_init($DEBUG);
 my $log = get_logger(__FILE__);
+my $top = $ot->top;
 
-my $tests = 18;
+
+# ---- module ----
 my $c_this = 'Tk::DBI::LoginDialog';
-
 require_ok($c_this);
-
-sub queue_button {
-	my ($o,$action,$timeout)=@_;
-	$timeout = TIMEOUT unless defined($timeout);
-
-	if ($action eq 'show') {
-		$o->after($timeout, sub{ $o->Show; });
-		$action = "Cancel";
-		$timeout *= 2;
-	}
-
-	my $button = $o->Subwidget("B_$action");
-	$button->after($timeout, sub{ $button->invoke; });
-
-	is($o->Show, $action,		"show $action");
-
-	$tests++;
-}
 
 
 # ---- create ----
@@ -87,7 +73,7 @@ my @drivers = qw/ Oracle ODBC CSV DB2 /;
 
 is_deeply($ld0->drivers(@drivers), [@drivers], "configure drivers");
 
-queue_button($ld0, "Cancel");
+$ot->queue_button($ld0, "Cancel");
 
 for my $driver (@drivers) {
 
@@ -95,7 +81,7 @@ for my $driver (@drivers) {
 
 	$ld0->_error("condition: DSN $driver");
 
-	queue_button($ld0, "Cancel");
+	$ot->queue_button($ld0, "Cancel");
 
 	isnt($ld0->driver, "",			"driver set after $driver");
 
@@ -117,7 +103,7 @@ isnt($removed, "",			"remove driver non-null");
 isnt($removed, $ld1->driver,		"remove a driver");
 isnt($driver, $ld1->driver,		"check removed");
 ok(@{ $ld1->drivers } == $count - 1,	"one less driver available");
-queue_button($ld1, "Cancel");
+$ot->queue_button($ld1, "Cancel");
 
 $removed = pop @{ $ld1->drivers };
 $ld1->_error("condition: removed $removed");
@@ -127,7 +113,7 @@ isnt($driver, $ld1->driver,		"check another removed");
 ok(@{ $ld1->drivers } == $count - 2,	"have removed again");
 isnt($ld1->driver, $driver,		"revised default");
 
-queue_button($ld1, "Cancel");
+$ot->queue_button($ld1, "Cancel");
 
 my $max = @{ $ld1->drivers };
 for (my $i = 0; $i < $max; $i++) {
@@ -135,14 +121,14 @@ for (my $i = 0; $i < $max; $i++) {
 	$removed = pop @{ $ld1->drivers };
 	$ld1->_error("condition: removing $removed");
 	ok(@{ $ld1->drivers } > 0,	"removing $removed");
-	queue_button($ld1, "Cancel");
+	$ot->queue_button($ld1, "Cancel");
 
 	$tests++;
 }
 
 ok(@{ $ld1->drivers } == $count,	"restored default drivers");
 
-queue_button($ld1, "Cancel");
+$ot->queue_button($ld1, "Cancel");
 
-done_testing($tests);
+done_testing($tests + $ot->count);
 

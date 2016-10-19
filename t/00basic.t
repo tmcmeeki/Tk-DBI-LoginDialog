@@ -28,15 +28,17 @@ use Tk;
 use Log::Log4perl qw/ :easy /;
 use Test::More;
 
-my $top; eval { $top = new MainWindow; };
+# ---- test harness ----
+use lib 't';
+use tester;
 
-if (Tk::Exists($top)) { plan tests => 18;
-} else { plan skip_all => 'No X server available'; }
+my $ot = tester->new;
+$ot->tests(18);
 
+# ---- module ----
 my $c_this = 'Tk::DBI::LoginDialog';
 require_ok($c_this);
 
-use constant TIMEOUT => (exists $ENV{TIMEOUT}) ? $ENV{TIMEOUT} : 250; # unit: ms
 
 # ---- globals ----
 Log::Log4perl->easy_init($DEBUG);
@@ -45,46 +47,28 @@ my $s_ok = "onnected";
 my ($dbh, $msg);
 
 
-sub queue_button {
-	my ($o,$action,$method)=@_;
-	my $label = "B_$action";
-
-	my $button = $o->Subwidget($label);
-
-#	$log->debug("about to queue action for [$label]");
-
-	$button->after(TIMEOUT, sub{ $button->invoke; });
-
-	if ($method eq "s") {
-		is($o->Show, $action,			"show $action");
-
-		is($o->cget('-pressed'), $action,	"pressed $action");
-	} else {
-		isa_ok($o->login(1), "DBI::db",		"$action");
-	}
-}
-
-
 # ---- create ----
-my $ld = $top->LoginDialog;
+my $ld = $ot->top->LoginDialog;
 isa_ok($ld, $c_this,		"new");
 
+
 # ---- cancel ----
-queue_button($ld, "Cancel", "s");
+$ot->queue_button($ld, "Cancel");
 ok(defined($ld->dbh) == 0,	"null dbh");
 
 # ---- exit ----
-$ld->configure(-exit => sub { warn "IGNORE dummy exit routine\n"; });
-queue_button($ld, "Exit", "s");
+$ot->dummy_exit($ld);
+$ot->queue_button($ld, "Exit");
+
 
 # ---- disconnection invalid ----
 $msg = $ld->disconnect;
 like($msg, qr/no database/,	"disconnect premature");
 
+
 # ---- login ----
 $ld->driver("ExampleP");
-queue_button($ld, "Login", "s");
-isa_ok($ld->dbh, "DBI::db",	"non-null dbh");
+$ot->queue_button($ld, "Login");
 
 
 # ---- connection ----
@@ -95,12 +79,13 @@ isnt("", $driver,		"driver initialisation");
 ok(defined($dbh),		"connect default handle");
 like($msg, qr/$s_ok/,		"connect default message");
 
+
 # ---- disconnection valid ----
 $msg = $ld->disconnect;
 like($msg, qr/$s_ok/,		"disconnect after connect");
 
 
-queue_button($ld, "Login", "l");
+$ot->queue_button($ld, "Login");
 like($ld->error, qr/$s_ok/,	"login okay");
 
 

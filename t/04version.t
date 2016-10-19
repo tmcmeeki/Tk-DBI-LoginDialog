@@ -28,36 +28,23 @@ use Log::Log4perl qw/ :easy /;
 use Tk;
 use Test::More;
 
-my $top; eval { $top = new MainWindow; };
+# ---- test harness ----
+use lib 't';
+use tester;
 
-if (Tk::Exists($top)) { plan tests => 14;
-} else { plan skip_all => 'No X server available'; }
+my $ot = tester->new;
+$ot->tests(20);
 
+
+# ---- module ----
 my $c_this = 'Tk::DBI::LoginDialog';
 require_ok($c_this);
-
-use constant TIMEOUT => (exists $ENV{TIMEOUT}) ? $ENV{TIMEOUT} : 250; # unit: ms
-
-sub queue_button {
-	my ($o,$action,$timeout)=@_;
-	$timeout = TIMEOUT unless defined($timeout);
-
-	if ($action eq 'show') {
-		$o->after($timeout, sub{ $o->Show; });
-		$action = "Cancel";
-		$timeout *= 2;
-	}
-
-	my $button = $o->Subwidget("B_$action");
-	$button->after($timeout, sub{ $button->invoke; });
-
-	is($o->Show, $action,		"show $action");
-}
 
 
 # ---- globals ----
 Log::Log4perl->easy_init($DEBUG);
 my $log = get_logger(__FILE__);
+my $top = $ot->top;
 
 
 # ---- create ----
@@ -69,20 +56,20 @@ isa_ok($ld, $c_this, "new object");
 # ---- show version ----
 my $default = $ld->version;
 isnt($default, "",		"retrieve version string");
-queue_button($ld, "Cancel");
+$ot->queue_button($ld, "Cancel");
 
 is($ld->version(1), $default,	"render version");
-queue_button($ld, "Cancel");
+$ot->queue_button($ld, "Cancel");
 
 is($ld->version, $default,	"hide version");
-queue_button($ld, "Cancel");
+$ot->queue_button($ld, "Cancel");
 
 is($ld->version, $default,	"hide-again version");
-queue_button($ld, "Cancel");
+$ot->queue_button($ld, "Cancel");
 
 is($ld->version(1), $default,	"re-render version");
-queue_button($ld, "Cancel");
+$ot->queue_button($ld, "Cancel");
 
 is($ld->version(0), $default,	"re-hide version");
-queue_button($ld, "Cancel");
+$ot->queue_button($ld, "Cancel");
 

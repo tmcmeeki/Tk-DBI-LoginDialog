@@ -33,7 +33,7 @@ use lib 't';
 use tester;
 
 my $ot = tester->new;
-$ot->tests(8);
+$ot->tests(16);
 
 
 # ---- module ----
@@ -53,13 +53,19 @@ isa_ok($tld0, $c_this,	"new object 1");
 $ot->queue_button($tld0, "Cancel");
 
 
+# ---- override button labels ----
 my @buttons = qw/ help me rhonda /;
 my $tld1 = $top->LoginDialog(-buttons => [ @buttons ]);
 isa_ok($tld1, $c_this,	"new object 2");
-$ot->queue_button($tld1, $buttons[0]);
-$ot->queue_button($tld1, $buttons[-1]);
+$ot->dummy_exit($tld1);
+
+$ot->queue_button($tld1, $buttons[0]);	# help
+$ot->queue_button($tld1, $buttons[1]);	# me
+$ot->queue_button($tld1, "me");		# me
+$ot->queue_button($tld1, $buttons[-1]);	# rhonda
 
 
+# ---- add a fourth button ----
 my $b_dodgy ="extra";
 unshift @buttons, $b_dodgy;
 my $tld2 = $top->LoginDialog(-buttons => [ @buttons ]);

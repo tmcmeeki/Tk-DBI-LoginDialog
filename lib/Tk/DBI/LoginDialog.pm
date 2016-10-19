@@ -40,13 +40,16 @@ The dialog presents three buttons as follows:
 
 =over 4
 
-=item B<Cancel>: hides the dialog without further processing or interaction.
+=item B<Cancel>: hides the dialog without further processing.
 
 =item B<Exit>: calls the defined exit routine.  See L<CALLBACKS>.
 
 =item B<Login>: attempt to login via DBI with the credentials supplied.
 
 =back
+
+These button labels may be overridden using the B<-buttons> and 
+B<-default_button> arguments (refer to the L<Tk::DialogBox> widget for detail).
 
 =cut
 
@@ -864,7 +867,7 @@ ___EUMM_VERSION___
 
 =head1 AUTHOR
 
-Copyright (C) 2014  B<Tom McMeekin> E<lt>tmcmeeki@cpan.orgE<gt>
+Copyright (C) 2014-2016  B<Tom McMeekin> E<lt>tmcmeeki@cpan.orgE<gt>
 
 =head1 LICENSE
 
@@ -884,7 +887,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 =head1 SEE ALSO
 
-L<perl>, L<DBI>, L<Tk>, L<Tk::DialogBox>.
+L<perl>, L<DBI>, L<Log::Log4perl>, L<Tk>, L<Tk::DialogBox>.
 
 =cut
 

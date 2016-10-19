@@ -28,11 +28,15 @@ use Tk;
 use Data::Dumper;
 use Test::More;
 
-my $top; eval { $top = new MainWindow; };
+# ---- test harness ----
+use lib 't';
+use tester;
 
-if (Tk::Exists($top)) { plan tests => 35;
-} else { plan skip_all => 'No X server available'; }
+my $ot = tester->new;
+$ot->tests(35);
 
+
+# ---- module ----
 my $c_this = 'Tk::DBI::LoginDialog';
 require_ok($c_this);
 
@@ -40,6 +44,7 @@ require_ok($c_this);
 # ---- globals ----
 Log::Log4perl->easy_init($DEBUG);
 my $log = get_logger(__FILE__);
+my $top = $ot->top;
 
 
 # ---- main ----

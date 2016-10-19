@@ -34,8 +34,12 @@ use constant TIMEOUT => (exists $ENV{TIMEOUT}) ? $ENV{TIMEOUT} : 250; # unit: ms
 our $AUTOLOAD;
 
 my %attribute = (
-	top => undef,
+	cycle => 0,
+	dummy => "IGNORE overidden dummy exit routine\n",
 	log => get_logger(__FILE__),
+	count => 0,
+	timeout => TIMEOUT,
+	top => undef,
 );
 
 
@@ -71,7 +75,7 @@ sub new {
 		confess "SYNTAX new(method => value, ...) value not specified"
 			unless (defined $value);
 
-		$self->_log->debug("method [self->$method($value)]");
+		$self->log->debug("method [self->$method($value)]");
 
 		$self->$method($value);
 	}
@@ -101,22 +105,76 @@ sub tests {
 sub queue_button {
 	my $self = shift;
 	my ($o,$action,$timeout)=@_;
-	$timeout = TIMEOUT unless defined($timeout);
 
-	if ($action eq 'show') {
-		$o->after($timeout, sub{ $o->Show; });
-		$action = "Cancel";
-		$timeout *= 2;
+	my $cycle = ++$self->{'cycle'};
+	my $label = "B_$action";
+
+	$self->timeout($timeout)
+		if (defined $timeout);
+
+	$self->log->trace(sprintf "action [$action] timeout [%d]", $self->timeout);
+
+	my $button = $o->Subwidget($label);
+
+	$self->log->trace("queuing button labelled [$label]");
+
+	$button->after($self->timeout, sub{ $button->invoke; });
+
+	if ($action eq 'Login') {
+
+		isa_ok($o->login(1), "DBI::db",		"login handle cycle $cycle"); 
+		++$self->{'count'};
+
+	} else {
+
+		is($o->Show, $action,		"show $action cycle $cycle");
+		++$self->{'count'};
 	}
 
-	my $button = $o->Subwidget("B_$action");
-
-	$button->after($timeout, sub{ $button->invoke; });
-
-	is($o->Show, $action,		"show $action");
+	is($o->cget('-pressed'), $action,	"pressed $action cycle $cycle"); 
+	++$self->{'count'};
 
 	return $button;
 }
 
+
+sub queue_login { 	# DO NOT USE; REDUNDANT!
+	my $self = shift;
+	my ($o,$action,$method)=@_; 
+ 
+	my $button = $o->Subwidget("B_$action");
+
+	$self->log->debug("about to queue action [$action]"); 
+ 
+	$button->after(TIMEOUT, sub{ $button->invoke; }); 
+ 
+	if ($method eq "s") { 
+		is($o->Show, $action,			"show $action"); 
+ 
+		is($o->cget('-pressed'), $action,	"pressed $action"); 
+	} else { 
+		isa_ok($o->login(1), "DBI::db",		"$action"); 
+	} 
+} 
+ 
+ 
+sub dummy_exit {
+	my $self = shift;
+	my ($o)=@_; 
+
+	$o->configure(-exit => sub { warn $self->dummy ; });
+}
+
+
+DESTROY {
+        my $self = shift;
+
+};
+
+#END { }
+
 1;
+
+__END__
+
 

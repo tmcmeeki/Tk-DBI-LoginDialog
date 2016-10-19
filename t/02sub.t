@@ -28,44 +28,33 @@ use Log::Log4perl qw/ :easy /;
 use Tk;
 use Test::More;
 
-my $top; eval { $top = new MainWindow; };
+# ---- test harness ----
+use lib 't';
+use tester;
 
-if (Tk::Exists($top)) { plan tests => 305;
-} else { plan skip_all => 'No X server available'; }
+my $ot = tester->new;
+$ot->tests(308);
 
+
+# ---- module ----
 my $c_this = 'Tk::DBI::LoginDialog';
 require_ok($c_this);
-
-use constant TIMEOUT => (exists $ENV{TIMEOUT}) ? $ENV{TIMEOUT} : 250; # unit: ms
-
-sub queue_button {
-	my ($o,$action,$timeout)=@_;
-	$timeout = TIMEOUT unless defined($timeout);
-
-	if ($action eq 'show') {
-		$o->after($timeout, sub{ $o->Show; });
-		$action = "Cancel";
-		$timeout *= 2;
-	}
-
-	my $button = $o->Subwidget("B_$action");
-	$button->after($timeout, sub{ $button->invoke; });
-
-	is($o->Show, $action,		"show $action");
-}
 
 
 # ---- globals ----
 Log::Log4perl->easy_init($DEBUG);
 my $log = get_logger(__FILE__);
+my $top = $ot->top;
+
 
 # ---- create ----
 my %field = (dsn => "val_0", username => "val_1", password => "val_2");
 my $ld0 = $top->LoginDialog(%field);
 isa_ok($ld0, $c_this, "new with parms");
 
+
 # ---- destroy some subwidgets ----
-queue_button($ld0, "Cancel");
+$ot->queue_button($ld0, "Cancel");
 
 for (keys %field, "error") {
 
@@ -80,6 +69,7 @@ for (keys %field, "error") {
 
 my $ld1 = $top->LoginDialog;
 isa_ok($ld1, $c_this, "new no parms");
+
 
 # ---- test properties of dialog ----
 my %prop = (
@@ -97,13 +87,14 @@ while (my ($property, $value) = each %prop) {
 
 	$prop{$property} = $old_value;
 }
-queue_button($ld1, "Cancel");
+$ot->queue_button($ld1, "Cancel");
 
 while (my ($property, $old_value) = each %prop) {
 
 	$ld1->configure($property => $old_value);
 	is($ld1->cget($property), $old_value,	"property $property reset");
 }
+
 
 # ---- test common properties of appropriate subwidgets ----
 my %common;	# maintain a count of common properties
@@ -176,4 +167,5 @@ for my $w (@subwidgets) {
 	}
 }
 
-queue_button($ld1, "Cancel");
+$ot->queue_button($ld1, "Cancel");
+
