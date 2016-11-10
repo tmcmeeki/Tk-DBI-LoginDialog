@@ -84,7 +84,7 @@ use constant S_WHATAMI => "Tk::DBI::LoginDialog";
 
 
 # --- package globals ---
-our $VERSION = '1.006';
+our $VERSION = '1.007';
 
 
 # --- package locals ---
