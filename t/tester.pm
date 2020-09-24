@@ -85,9 +85,9 @@ sub new {
 		$self->$method($value);
 	}
 
-	my $top; eval { $top = new MainWindow; };
+	my $top = eval { new MainWindow; }; # ref. http://cpanwiki.grango.org/wiki/CPANAuthorNotes
 
-	unless (Tk::Exists($top)) {
+	unless ($top && Tk::Exists($top)) {
 
 		plan skip_all => 'No X server available';
 	}
