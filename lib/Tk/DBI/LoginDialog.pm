@@ -84,7 +84,7 @@ use constant S_WHATAMI => "Tk::DBI::LoginDialog";
 
 
 # --- package globals ---
-our $VERSION = '1.007';
+our $VERSION = '1.008';
 
 
 # --- package locals ---
@@ -868,6 +868,10 @@ ___EUMM_VERSION___
 =head1 AUTHOR
 
 Copyright (C) 2014-2016  B<Tom McMeekin> E<lt>tmcmeeki@cpan.orgE<gt>
+
+=head1 CONTRIBUTORS
+
+Werner Kratzert
 
 =head1 LICENSE
 
